@@ -1,0 +1,30 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:../../data/jobapps.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  content   String
+  company   String?
+  role      String?
+  createdAt DateTime @default(now())
+}
+
+model Application {
+  id          String   @id @default(cuid())
+  jobTitle    String
+  company     String
+  jobUrl      String?
+  jobDesc     String
+  coverLetter String
+  resume      String
+  websiteHtml String
+  createdAt   DateTime @default(now())
+}

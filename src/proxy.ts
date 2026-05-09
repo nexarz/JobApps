@@ -10,7 +10,7 @@ export function proxy(req: NextRequest) {
   }
 
   const auth = req.cookies.get("auth")?.value;
-  if (auth !== process.env.APP_PASSWORD) {
+  if (!auth) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 

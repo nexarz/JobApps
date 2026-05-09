@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -14,12 +14,12 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(form),
     });
     if (res.ok) {
       window.location.href = "/";
     } else {
-      setError("Incorrect password");
+      setError("Wrong username or password");
       setLoading(false);
     }
   };
@@ -39,10 +39,18 @@ export default function LoginPage() {
 
         <form onSubmit={submit} className="rounded-2xl border p-8 space-y-4" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
           <input
-            type="password" autoFocus required
+            type="text" autoFocus required
+            placeholder="Username"
+            value={form.username}
+            onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none border transition-all"
+            style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
+          />
+          <input
+            type="password" required
             placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
             className="w-full rounded-xl px-4 py-3 text-sm outline-none border transition-all"
             style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
           />

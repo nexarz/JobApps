@@ -7,6 +7,15 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model User {
+  id           String        @id @default(cuid())
+  username     String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  documents    Document[]
+  applications Application[]
+}
+
 model Document {
   id        String   @id @default(cuid())
   type      String
@@ -15,6 +24,8 @@ model Document {
   company   String?
   role      String?
   createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model Application {
@@ -27,4 +38,6 @@ model Application {
   resume      String
   websiteHtml String
   createdAt   DateTime @default(now())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
 }

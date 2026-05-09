@@ -40,7 +40,18 @@
       "Bash(git commit -m 'Add keyword relevance scoring to select most relevant cover letters before LLM call *)",
       "Bash(git commit -m 'Add stemming to relevance scorer for better keyword matching *)",
       "Bash(python3 -c \"import sys,json; [print\\(f['name'], f['type']\\) for f in json.load\\(sys.stdin\\)]\")",
-      "Bash(git commit -m 'Full UI redesign: cook.stgy.ca design language with award-winning UX *)"
+      "Bash(git commit -m 'Full UI redesign: cook.stgy.ca design language with award-winning UX *)",
+      "Bash(ls /Users/Steve/.claude/projects/-Users-Steve-Documents-JobApps/memory/ 2>/dev/null || mkdir -p /Users/Steve/.claude/projects/-Users-Steve-Documents-JobApps/memory && echo \"created\")",
+      "Bash(find /tmp/cook-repo -name \"*.svg\" -o -name \"*.png\" -o -name \"*.ico\" 2>/dev/null | grep -v node_modules | grep -v \".next\")",
+      "Bash(cp /tmp/cook-repo/public/logo.png /Users/Steve/Documents/JobApps/public/logo.png)",
+      "Bash(cp /tmp/cook-repo/app/favicon.ico /Users/Steve/Documents/JobApps/src/app/favicon.ico)",
+      "Bash(git commit -m ' *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "Bash(cat /tmp/peggy-repo/peggy-site/src/app/page.tsx)",
+      "Bash(grep -o '\"[^\"]\\\\{10,\\\\}\"' /tmp/peggy-repo/peggy-site/src/app/page.tsx)",
+      "Bash(grep -E \">[^<{]{15,}<\" /tmp/peggy-repo/peggy-site/src/app/page.tsx)",
+      "Bash(grep -v \"^$\\\\|className\\\\|style\\\\|{\")",
+      "WebSearch"
     ]
   }
 }

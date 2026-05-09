@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FadeIn, FadeUpList, FadeUpItem } from "@/components/FadeUp";
 
 type Doc = { id: string; type: string; title: string; company?: string; role?: string; createdAt: string };
 
@@ -8,9 +10,9 @@ export default function VaultPage() {
   const [form, setForm] = useState({ type: "cover_letter", title: "", content: "", company: "", role: "" });
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<"all" | "cover_letter" | "resume">("all");
+  const [saved, setSaved] = useState(false);
 
-  const refresh = () =>
-    fetch("/api/documents").then((r) => r.json()).then(setDocs);
+  const refresh = () => fetch("/api/documents").then((r) => r.json()).then(setDocs);
 
   useEffect(() => { refresh(); }, []);
 
@@ -21,6 +23,8 @@ export default function VaultPage() {
     setForm({ type: "cover_letter", title: "", content: "", company: "", role: "" });
     await refresh();
     setLoading(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const del = async (id: string) => {
@@ -29,125 +33,145 @@ export default function VaultPage() {
   };
 
   const filtered = tab === "all" ? docs : docs.filter((d) => d.type === tab);
+  const counts = { all: docs.length, cover_letter: docs.filter(d => d.type === "cover_letter").length, resume: docs.filter(d => d.type === "resume").length };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-400 to-purple-500 bg-clip-text text-transparent mb-1">
-          Document Vault
-        </h1>
-        <p className="text-slate-500">Upload your past cover letters and resumes. The more you add, the better the AI learns your voice.</p>
-      </div>
+    <div className="max-w-3xl mx-auto px-6 py-12">
+      <FadeIn>
+        <div className="mb-8">
+          <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Vault</p>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: "var(--ink)" }}>Document vault</h1>
+          <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+            The more you add, the better the AI learns your voice. {docs.length > 0 && `${docs.length} documents loaded.`}
+          </p>
+        </div>
+      </FadeIn>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-2xl border border-pink-100 p-6 shadow-sm">
-          <h2 className="font-semibold text-slate-800 mb-4">Add Document</h2>
-          <form onSubmit={submit} className="space-y-4">
-            <div className="flex gap-2">
-              {["cover_letter", "resume"].map((t) => (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <FadeIn delay={0.05}>
+          <form onSubmit={submit} className="rounded-2xl border p-6 space-y-4" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+            <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: "var(--paper-3)" }}>
+              {(["cover_letter", "resume"] as const).map((t) => (
                 <button
-                  key={t}
-                  type="button"
+                  key={t} type="button"
                   onClick={() => setForm((f) => ({ ...f, type: t }))}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                    form.type === t
-                      ? "bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow"
-                      : "bg-pink-50 text-slate-600 hover:bg-pink-100"
-                  }`}
+                  className="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-200"
+                  style={{
+                    backgroundColor: form.type === t ? "var(--paper)" : "transparent",
+                    color: form.type === t ? "var(--ink)" : "var(--ink-3)",
+                    boxShadow: form.type === t ? "0 1px 4px rgba(26,26,24,0.1)" : "none",
+                  }}
                 >
                   {t === "cover_letter" ? "Cover Letter" : "Resume"}
                 </button>
               ))}
             </div>
+
             <input
-              required
-              placeholder="Title (e.g. 'Product Manager @ Acme')"
+              required placeholder="Title"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full rounded-xl px-4 py-2.5 text-sm font-medium outline-none border transition-all"
+              style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
             />
+
             <div className="flex gap-2">
               <input
                 placeholder="Company"
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                className="flex-1 border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+                style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
               />
               <input
                 placeholder="Role"
                 value={form.role}
                 onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                className="flex-1 border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+                style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
               />
             </div>
+
             <textarea
-              required
-              placeholder="Paste the full text of your cover letter or resume here..."
+              required rows={9}
+              placeholder="Paste the full text here..."
               value={form.content}
               onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
-              rows={10}
-              className="w-full border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none border resize-none transition-all leading-relaxed"
+              style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
             />
+
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-400 to-pink-400 text-white font-medium hover:from-rose-500 hover:to-pink-500 transition-all disabled:opacity-50"
+              type="submit" disabled={loading}
+              className="w-full py-3 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.98]"
+              style={{ backgroundColor: saved ? "var(--mint)" : "var(--ink)", color: saved ? "var(--ink)" : "#fff" }}
             >
-              {loading ? "Saving..." : "Add to Vault"}
+              {loading ? "Saving..." : saved ? "✓ Saved" : "Add to vault"}
             </button>
           </form>
-        </div>
+        </FadeIn>
 
-        <div>
-          <div className="flex gap-2 mb-4">
-            {(["all", "cover_letter", "resume"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  tab === t ? "bg-pink-100 text-pink-600" : "text-slate-500 hover:text-pink-500"
-                }`}
-              >
-                {t === "all" ? "All" : t === "cover_letter" ? "Cover Letters" : "Resumes"}
-                <span className="ml-1.5 text-xs opacity-60">
-                  {t === "all" ? docs.length : docs.filter((d) => d.type === t).length}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            {filtered.length === 0 && (
-              <div className="text-center py-12 text-slate-400 text-sm bg-white rounded-2xl border border-pink-100">
-                No documents yet. Add one to start training your voice model.
-              </div>
-            )}
-            {filtered.map((doc) => (
-              <div key={doc.id} className="bg-white rounded-2xl border border-pink-100 p-4 flex items-start justify-between group hover:border-pink-200 transition-all">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      doc.type === "cover_letter" ? "bg-rose-100 text-rose-500" : "bg-purple-100 text-purple-500"
-                    }`}>
-                      {doc.type === "cover_letter" ? "Cover Letter" : "Resume"}
-                    </span>
-                    {doc.company && <span className="text-xs text-slate-400">{doc.company}</span>}
-                  </div>
-                  <p className="font-medium text-slate-700 text-sm">{doc.title}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {new Date(doc.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+        <FadeIn delay={0.1}>
+          <div>
+            <div className="flex gap-1 mb-4">
+              {(["all", "cover_letter", "resume"] as const).map((t) => (
                 <button
-                  onClick={() => del(doc.id)}
-                  className="text-slate-300 hover:text-rose-400 transition-colors text-lg leading-none opacity-0 group-hover:opacity-100"
+                  key={t} onClick={() => setTab(t)}
+                  className="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all"
+                  style={{
+                    backgroundColor: tab === t ? "var(--paper-3)" : "transparent",
+                    color: tab === t ? "var(--ink)" : "var(--ink-3)",
+                  }}
                 >
-                  ×
+                  {t === "all" ? "All" : t === "cover_letter" ? "Cover Letters" : "Resumes"}
+                  <span className="ml-1 opacity-50">{counts[t]}</span>
                 </button>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+              <AnimatePresence>
+                {filtered.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="text-center py-16 rounded-2xl border"
+                    style={{ borderColor: "var(--border)", color: "var(--ink-3)" }}
+                  >
+                    <div className="text-3xl mb-2">◈</div>
+                    <p className="text-sm">No documents yet</p>
+                  </motion.div>
+                )}
+                {filtered.map((doc) => (
+                  <motion.div
+                    key={doc.id}
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -10 }}
+                    className="flex items-start justify-between rounded-xl border px-4 py-3 group transition-all"
+                    style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: doc.type === "cover_letter" ? "var(--purple-light)" : "var(--peach-light)",
+                            color: doc.type === "cover_letter" ? "var(--purple)" : "var(--peach)",
+                          }}>
+                          {doc.type === "cover_letter" ? "CL" : "CV"}
+                        </span>
+                        {doc.company && <span className="text-xs truncate" style={{ color: "var(--ink-3)" }}>{doc.company}</span>}
+                      </div>
+                      <p className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>{doc.title}</p>
+                    </div>
+                    <button
+                      onClick={() => del(doc.id)}
+                      className="ml-3 text-lg leading-none opacity-0 group-hover:opacity-100 transition-opacity active:scale-90"
+                      style={{ color: "var(--ink-3)" }}
+                    >×</button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
+        </FadeIn>
       </div>
     </div>
   );

@@ -1,31 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #1e1b4b;
+  --ink: #1a1a18;
+  --ink-2: #4a4a46;
+  --ink-3: #9a9490;
+
+  --paper: #fffcf8;
+  --paper-2: #fef5ed;
+  --paper-3: #fde8d8;
+
+  --purple: #b892d4;
+  --purple-light: #f2eafb;
+
+  --pink: #f08c88;
+  --pink-light: #fef0ef;
+
+  --peach: #f0a45a;
+  --peach-light: #fff4e5;
+
+  --mint: #7ec8ba;
+  --mint-light: #e5f6f3;
+
+  --border: rgba(26, 26, 24, 0.12);
+  --border-strong: rgba(26, 26, 24, 0.22);
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, sans-serif;
+html, body {
+  background-color: var(--paper);
+  color: var(--ink);
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(244, 114, 182, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(244, 114, 182, 0.6); }
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(26, 26, 24, 0.09);
 }
 
-@keyframes slide-up {
-  0% { transform: translateY(20px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-.animate-float { animation: float 3s ease-in-out infinite; }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-.animate-slide-up { animation: slide-up 0.5s ease-out; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--paper-2); }
+::-webkit-scrollbar-thumb { background: var(--paper-3); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-3); }

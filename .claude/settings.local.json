@@ -28,7 +28,19 @@
       "Bash(grep -E \"\\\\.\\(tsx?|css|json\\)$\")",
       "Bash(git commit -m 'Add document seeding: drop cover letters/resumes in /documents and run npm run seed *)",
       "Bash(git commit -m 'Convert and import 83 cover letters into vault *)",
-      "Bash(git commit -m 'Swap from Anthropic Claude to Google Gemini Pro API *)"
+      "Bash(git commit -m 'Swap from Anthropic Claude to Google Gemini Pro API *)",
+      "Bash(git commit -m 'Upgrade to Gemini 2.0 Flash for faster, cheaper generations *)",
+      "Bash(git commit -m 'Fix: use gemini-1.5-flash \\(available on free tier\\) *)",
+      "Bash(curl -s \"https://generativelanguage.googleapis.com/v1beta/models?key=AIzaSyA3vZbIrsptY9txLbUdEq8HBi0D1yqTQtE\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(git commit -m 'Fix: use gemini-2.5-flash \\(confirmed available on API key\\) *)",
+      "Bash(git commit -m 'Fix JSON parsing: use responseMimeType application/json to force clean JSON output *)",
+      "Bash(git commit -m 'Fix truncation: increase maxOutputTokens to 65536, cap input to 15 cover letters *)",
+      "Bash(git commit -m 'Add password protection: middleware auth gate with login page and logout *)",
+      "Bash(git commit -m 'Add keyword relevance scoring to select most relevant cover letters before LLM call *)",
+      "Bash(git commit -m 'Add stemming to relevance scorer for better keyword matching *)",
+      "Bash(python3 -c \"import sys,json; [print\\(f['name'], f['type']\\) for f in json.load\\(sys.stdin\\)]\")",
+      "Bash(git commit -m 'Full UI redesign: cook.stgy.ca design language with award-winning UX *)"
     ]
   }
 }

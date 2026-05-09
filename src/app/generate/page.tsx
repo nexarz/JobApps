@@ -1,17 +1,25 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FadeIn } from "@/components/FadeUp";
+import { motion } from "framer-motion";
 
 export default function GeneratePage() {
   const router = useRouter();
   const [form, setForm] = useState({ jobTitle: "", company: "", jobUrl: "", jobDesc: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [step, setStep] = useState(0);
+
+  const steps = ["Reading your vault...", "Selecting relevant letters...", "Writing in your voice...", "Finishing up..."];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    const interval = setInterval(() => setStep((s) => Math.min(s + 1, steps.length - 1)), 4000);
+
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -24,92 +32,111 @@ export default function GeneratePage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
       setLoading(false);
+      setStep(0);
+    } finally {
+      clearInterval(interval);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-400 to-purple-500 bg-clip-text text-transparent mb-1">
-          Generate Application
-        </h1>
-        <p className="text-slate-500">Paste a job posting and we&apos;ll create a tailored cover letter, resume, and personal site in your voice.</p>
-      </div>
-
-      <form onSubmit={submit} className="bg-white rounded-2xl border border-pink-100 p-8 shadow-sm space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Job Title *</label>
-            <input
-              required
-              value={form.jobTitle}
-              onChange={(e) => setForm((f) => ({ ...f, jobTitle: e.target.value }))}
-              placeholder="e.g. Senior Product Manager"
-              className="w-full border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Company *</label>
-            <input
-              required
-              value={form.company}
-              onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-              placeholder="e.g. Acme Corp"
-              className="w-full border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Job Posting URL (optional)</label>
-          <input
-            value={form.jobUrl}
-            onChange={(e) => setForm((f) => ({ ...f, jobUrl: e.target.value }))}
-            placeholder="https://..."
-            type="url"
-            className="w-full border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Job Description *</label>
-          <textarea
-            required
-            value={form.jobDesc}
-            onChange={(e) => setForm((f) => ({ ...f, jobDesc: e.target.value }))}
-            placeholder="Paste the full job description here..."
-            rows={12}
-            className="w-full border border-pink-100 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
-          />
-        </div>
-
-        {error && (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-sm">
-            {error}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-rose-400 to-purple-400 text-white font-semibold text-lg hover:from-rose-500 hover:to-purple-500 transition-all disabled:opacity-50 shadow-md hover:shadow-lg"
-        >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full" />
-              Generating your materials...
-            </span>
-          ) : (
-            "✨ Generate Application Materials"
-          )}
-        </button>
-
-        {loading && (
-          <p className="text-center text-sm text-slate-400">
-            This takes about 30 seconds. Claude is reading your vault and writing in your voice...
+    <div className="max-w-2xl mx-auto px-6 py-12">
+      <FadeIn>
+        <div className="mb-8">
+          <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Generate</p>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: "var(--ink)" }}>New application</h1>
+          <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+            Paste the job posting and we&apos;ll write everything in your voice.
           </p>
-        )}
-      </form>
+        </div>
+      </FadeIn>
+
+      <FadeIn delay={0.06}>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--ink-2)" }}>Job title *</label>
+              <input
+                required value={form.jobTitle}
+                onChange={(e) => setForm((f) => ({ ...f, jobTitle: e.target.value }))}
+                placeholder="e.g. Program Manager"
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+                style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", color: "var(--ink)" }}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--ink-2)" }}>Company *</label>
+              <input
+                required value={form.company}
+                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                placeholder="e.g. City of Vancouver"
+                className="w-full rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+                style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", color: "var(--ink)" }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--ink-2)" }}>Job posting URL (optional)</label>
+            <input
+              value={form.jobUrl} type="url"
+              onChange={(e) => setForm((f) => ({ ...f, jobUrl: e.target.value }))}
+              placeholder="https://..."
+              className="w-full rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+              style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", color: "var(--ink)" }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--ink-2)" }}>Job description *</label>
+            <textarea
+              required rows={13} value={form.jobDesc}
+              onChange={(e) => setForm((f) => ({ ...f, jobDesc: e.target.value }))}
+              placeholder="Paste the full job description here..."
+              className="w-full rounded-xl px-4 py-3 text-sm outline-none border resize-none leading-relaxed transition-all"
+              style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", color: "var(--ink)" }}
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-xl px-4 py-3 text-sm border" style={{ backgroundColor: "var(--pink-light)", borderColor: "rgba(240,140,136,0.3)", color: "var(--pink)" }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit" disabled={loading}
+            className="w-full py-3.5 rounded-xl text-sm font-bold transition-all duration-200 active:scale-[0.98] disabled:opacity-70"
+            style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+          >
+            {loading ? (
+              <span className="flex items-center justify-center gap-3">
+                <span className="inline-block w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#fff" }} />
+                {steps[step]}
+              </span>
+            ) : (
+              "Generate application →"
+            )}
+          </button>
+
+          {loading && (
+            <motion.div
+              className="rounded-xl px-4 py-3 border"
+              style={{ backgroundColor: "var(--purple-light)", borderColor: "rgba(184,146,212,0.3)" }}
+              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex gap-1 mb-2">
+                {steps.map((_, i) => (
+                  <div key={i} className="flex-1 h-1 rounded-full transition-all duration-700"
+                    style={{ backgroundColor: i <= step ? "var(--purple)" : "rgba(184,146,212,0.25)" }} />
+                ))}
+              </div>
+              <p className="text-xs font-medium" style={{ color: "var(--purple)" }}>
+                This takes about 20–30 seconds
+              </p>
+            </motion.div>
+          )}
+        </form>
+      </FadeIn>
     </div>
   );
 }

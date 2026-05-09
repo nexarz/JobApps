@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,13 +13,11 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
-
     if (res.ok) {
       router.push("/");
       router.refresh();
@@ -29,35 +28,39 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-pink-50 to-purple-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: "var(--paper)" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="w-full max-w-sm"
+      >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-rose-400 to-purple-500 bg-clip-text text-transparent mb-2">
-            JobApps
-          </h1>
-          <p className="text-slate-500 text-sm">Enter your password to continue</p>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-2" style={{ color: "var(--ink)" }}>JobApps</h1>
+          <p className="text-sm" style={{ color: "var(--ink-3)" }}>Enter your password to continue</p>
         </div>
 
-        <form onSubmit={submit} className="bg-white rounded-2xl border border-pink-100 shadow-sm p-8 space-y-4">
+        <form onSubmit={submit} className="rounded-2xl border p-8 space-y-4" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
           <input
-            type="password"
-            autoFocus
-            required
+            type="password" autoFocus required
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-pink-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className="w-full rounded-xl px-4 py-3 text-sm outline-none border transition-all"
+            style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
           />
-          {error && <p className="text-rose-500 text-sm">{error}</p>}
+          {error && (
+            <p className="text-xs font-semibold" style={{ color: "var(--pink)" }}>{error}</p>
+          )}
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-rose-400 to-pink-400 text-white font-medium hover:from-rose-500 hover:to-pink-500 transition-all disabled:opacity-50"
+            type="submit" disabled={loading}
+            className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-60"
+            style={{ backgroundColor: "var(--ink)", color: "#fff" }}
           >
-            {loading ? "Signing in..." : "Sign In"}
+            {loading ? "Signing in..." : "Sign in →"}
           </button>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

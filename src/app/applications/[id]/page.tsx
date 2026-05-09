@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { FadeIn } from "@/components/FadeUp";
 
 type Application = {
   id: string; jobTitle: string; company: string; jobUrl?: string;
   coverLetter: string; resume: string; websiteHtml: string; createdAt: string;
 };
-
 type Tab = "cover_letter" | "resume" | "website";
 
 export default function ApplicationDetailPage() {
@@ -14,26 +16,29 @@ export default function ApplicationDetailPage() {
   const router = useRouter();
   const [app, setApp] = useState<Application | null>(null);
   const [tab, setTab] = useState<Tab>("cover_letter");
-  const [copying, setCopying] = useState(false);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     fetch(`/api/applications/${id}`).then((r) => r.json()).then(setApp);
   }, [id]);
 
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2000);
+  };
+
   const copy = async (text: string) => {
     await navigator.clipboard.writeText(text);
-    setCopying(true);
-    setTimeout(() => setCopying(false), 1500);
+    showToast("Copied to clipboard");
   };
 
   const download = (filename: string, content: string, mime = "text/plain") => {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
+    showToast("Downloaded");
   };
 
   const del = async () => {
@@ -45,7 +50,7 @@ export default function ApplicationDetailPage() {
   if (!app) {
     return (
       <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-pink-200 border-t-pink-400 rounded-full" />
+        <div className="w-6 h-6 rounded-full border-2 animate-spin" style={{ borderColor: "var(--border)", borderTopColor: "var(--purple)" }} />
       </div>
     );
   }
@@ -56,90 +61,121 @@ export default function ApplicationDetailPage() {
     { key: "website", label: "Personal Site" },
   ];
 
+  const activeContent = tab === "cover_letter" ? app.coverLetter : app.resume;
+
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-800">{app.jobTitle}</h1>
-          <p className="text-slate-500 mt-1">
-            {app.company} · {new Date(app.createdAt).toLocaleDateString()}
-            {app.jobUrl && (
-              <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" className="ml-2 text-pink-400 hover:underline text-sm">
-                View posting ↗
-              </a>
-            )}
-          </p>
-        </div>
-        <button onClick={del} className="text-sm text-slate-400 hover:text-rose-400 transition-colors">
-          Delete
-        </button>
-      </div>
-
-      <div className="flex gap-2 mb-6">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-              tab === t.key
-                ? "bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow"
-                : "bg-white border border-pink-100 text-slate-600 hover:border-pink-300"
-            }`}
+    <div className="max-w-3xl mx-auto px-6 py-12">
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full text-sm font-bold shadow-lg"
+            style={{ backgroundColor: "var(--ink)", color: "#fff" }}
           >
-            {t.label}
-          </button>
-        ))}
-      </div>
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {tab === "website" ? (
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <button
-              onClick={() => download(`${app.company}-${app.jobTitle}-site.html`, app.websiteHtml, "text/html")}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-400 to-pink-400 text-white text-sm font-medium hover:from-rose-500 hover:to-pink-500"
-            >
-              Download HTML
-            </button>
-            <button
-              onClick={() => copy(app.websiteHtml)}
-              className="px-4 py-2 rounded-xl border border-pink-100 text-sm text-slate-600 hover:border-pink-300"
-            >
-              {copying ? "Copied!" : "Copy HTML"}
-            </button>
-          </div>
-          <div className="rounded-2xl overflow-hidden border border-pink-100 shadow-lg">
-            <iframe
-              srcDoc={app.websiteHtml}
-              className="w-full"
-              style={{ height: "600px", border: "none" }}
-              title="Application Website Preview"
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-pink-100 shadow-sm">
-          <div className="flex gap-2 p-4 border-b border-pink-50">
-            <button
-              onClick={() => copy(tab === "cover_letter" ? app.coverLetter : app.resume)}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-400 to-pink-400 text-white text-sm font-medium hover:from-rose-500 hover:to-pink-500"
-            >
-              {copying ? "Copied!" : "Copy Text"}
-            </button>
-            <button
-              onClick={() => download(
-                `${app.company}-${tab === "cover_letter" ? "cover-letter" : "resume"}.txt`,
-                tab === "cover_letter" ? app.coverLetter : app.resume
+      <FadeIn>
+        <div className="flex items-start justify-between mb-8">
+          <div>
+            <Link href="/applications" className="text-xs font-semibold mb-3 inline-flex items-center gap-1 transition-all"
+              style={{ color: "var(--ink-3)" }}>
+              ← Applications
+            </Link>
+            <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>{app.jobTitle}</h1>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-sm" style={{ color: "var(--ink-3)" }}>{app.company}</p>
+              <span style={{ color: "var(--border)" }}>·</span>
+              <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+                {new Date(app.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+              {app.jobUrl && (
+                <>
+                  <span style={{ color: "var(--border)" }}>·</span>
+                  <a href={app.jobUrl} target="_blank" rel="noopener noreferrer" className="text-sm transition-all" style={{ color: "var(--purple)" }}>
+                    Job posting ↗
+                  </a>
+                </>
               )}
-              className="px-4 py-2 rounded-xl border border-pink-100 text-sm text-slate-600 hover:border-pink-300"
-            >
-              Download
-            </button>
+            </div>
           </div>
-          <pre className="p-6 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-sans">
-            {tab === "cover_letter" ? app.coverLetter : app.resume}
-          </pre>
+          <button onClick={del} className="text-xs font-semibold transition-all" style={{ color: "var(--ink-3)" }}>
+            Delete
+          </button>
         </div>
-      )}
+
+        {/* Tabs */}
+        <div className="flex gap-1 mb-6 p-1 rounded-2xl border inline-flex" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+          {tabs.map((t) => (
+            <button
+              key={t.key} onClick={() => setTab(t.key)}
+              className="px-5 py-2 rounded-xl text-sm font-bold transition-all duration-200 relative"
+              style={{ color: tab === t.key ? "var(--ink)" : "var(--ink-3)" }}
+            >
+              {tab === t.key && (
+                <motion.div layoutId="tab-bg" className="absolute inset-0 rounded-xl"
+                  style={{ backgroundColor: "var(--paper)" }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                />
+              )}
+              <span className="relative z-10">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      </FadeIn>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          {tab === "website" ? (
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => download(`${app.company}-site.html`, app.websiteHtml, "text/html")}
+                  className="px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95"
+                  style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+                >Download HTML</button>
+                <button
+                  onClick={() => copy(app.websiteHtml)}
+                  className="px-4 py-2 rounded-xl text-sm font-bold border transition-all active:scale-95"
+                  style={{ borderColor: "var(--border)", color: "var(--ink-2)" }}
+                >Copy HTML</button>
+              </div>
+              <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--border)" }}>
+                <iframe srcDoc={app.websiteHtml} className="w-full" style={{ height: 580, border: "none" }} title="Application website" />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+              <div className="flex gap-2 px-5 py-3 border-b" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+                <button
+                  onClick={() => copy(activeContent)}
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+                  style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+                >Copy</button>
+                <button
+                  onClick={() => download(`${app.company}-${tab}.txt`, activeContent)}
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95"
+                  style={{ borderColor: "var(--border)", color: "var(--ink-2)" }}
+                >Download</button>
+              </div>
+              <pre className="p-6 text-sm leading-relaxed whitespace-pre-wrap font-sans" style={{ color: "var(--ink-2)", backgroundColor: "var(--paper)" }}>
+                {activeContent}
+              </pre>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

@@ -4,12 +4,14 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeIn } from "@/components/FadeUp";
+import type { AnalysisResult } from "@/lib/claude";
 
 type Application = {
   id: string; jobTitle: string; company: string; jobUrl?: string;
   coverLetter: string; resume: string; websiteHtml: string; createdAt: string;
+  jobDesc: string;
 };
-type Tab = "cover_letter" | "resume" | "website";
+type Tab = "cover_letter" | "resume" | "website" | "analyze";
 
 export default function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,9 +20,27 @@ export default function ApplicationDetailPage() {
   const [tab, setTab] = useState<Tab>("cover_letter");
   const [toast, setToast] = useState("");
 
+  // analyze state
+  const [analyzeType, setAnalyzeType] = useState<"resume" | "cover_letter">("cover_letter");
+  const [analyzeText, setAnalyzeText] = useState("");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [analyzeError, setAnalyzeError] = useState("");
+
   useEffect(() => {
-    fetch(`/api/applications/${id}`).then((r) => r.json()).then(setApp);
+    fetch(`/api/applications/${id}`).then((r) => r.json()).then((data) => {
+      setApp(data);
+      setAnalyzeText(data.coverLetter ?? "");
+    });
   }, [id]);
+
+  // sync textarea when type changes
+  useEffect(() => {
+    if (!app) return;
+    setAnalyzeText(analyzeType === "resume" ? app.resume : app.coverLetter);
+    setAnalysis(null);
+    setAnalyzeError("");
+  }, [analyzeType, app]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -47,6 +67,32 @@ export default function ApplicationDetailPage() {
     router.push("/applications");
   };
 
+  const runAnalysis = async () => {
+    if (!app || !analyzeText.trim()) return;
+    setAnalyzing(true);
+    setAnalysis(null);
+    setAnalyzeError("");
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: analyzeText,
+          type: analyzeType,
+          jobDesc: app.jobDesc,
+          jobTitle: app.jobTitle,
+          company: app.company,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setAnalysis(await res.json());
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   if (!app) {
     return (
       <div className="flex items-center justify-center min-h-64">
@@ -59,6 +105,7 @@ export default function ApplicationDetailPage() {
     { key: "cover_letter", label: "Cover Letter" },
     { key: "resume", label: "Resume" },
     { key: "website", label: "Personal Site" },
+    { key: "analyze", label: "ATS Check" },
   ];
 
   const activeContent = tab === "cover_letter" ? app.coverLetter : app.resume;
@@ -155,6 +202,161 @@ export default function ApplicationDetailPage() {
                 <iframe srcDoc={app.websiteHtml} className="w-full" style={{ height: 580, border: "none" }} title="Application website" />
               </div>
             </div>
+
+          ) : tab === "analyze" ? (
+            <div className="space-y-5">
+              {/* Type selector */}
+              <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: "var(--paper-3)" }}>
+                {(["cover_letter", "resume"] as const).map((t) => (
+                  <button
+                    key={t} onClick={() => setAnalyzeType(t)}
+                    className="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-200"
+                    style={{
+                      backgroundColor: analyzeType === t ? "var(--paper)" : "transparent",
+                      color: analyzeType === t ? "var(--ink)" : "var(--ink-3)",
+                      boxShadow: analyzeType === t ? "0 1px 4px rgba(26,26,24,0.1)" : "none",
+                    }}
+                  >
+                    {t === "cover_letter" ? "Cover Letter" : "Resume"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Editable textarea */}
+              <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+                <div className="px-5 py-3 border-b flex items-center justify-between" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+                  <p className="text-xs font-bold" style={{ color: "var(--ink-2)" }}>
+                    Paste your edited version here
+                  </p>
+                  <button
+                    onClick={() => setAnalyzeText(analyzeType === "resume" ? app.resume : app.coverLetter)}
+                    className="text-xs font-semibold transition-all"
+                    style={{ color: "var(--ink-3)" }}
+                  >
+                    Reset to generated
+                  </button>
+                </div>
+                <textarea
+                  value={analyzeText}
+                  onChange={(e) => { setAnalyzeText(e.target.value); setAnalysis(null); }}
+                  rows={14}
+                  className="w-full px-6 py-4 text-sm leading-relaxed resize-none outline-none font-sans"
+                  style={{ color: "var(--ink-2)", backgroundColor: "var(--paper)" }}
+                  placeholder="Paste your edited text here..."
+                />
+              </div>
+
+              <button
+                onClick={runAnalysis}
+                disabled={analyzing || !analyzeText.trim()}
+                className="w-full py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-60"
+                style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+              >
+                {analyzing ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="inline-block w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: "rgba(255,255,255,0.2)", borderTopColor: "#fff" }} />
+                    Analyzing against 2026 ATS standards...
+                  </span>
+                ) : "Run ATS Check →"}
+              </button>
+
+              {analyzeError && (
+                <p className="text-xs font-semibold px-4 py-3 rounded-xl border" style={{ color: "var(--pink)", backgroundColor: "var(--pink-light)", borderColor: "rgba(240,140,136,0.3)" }}>
+                  {analyzeError}
+                </p>
+              )}
+
+              {/* Results */}
+              <AnimatePresence>
+                {analysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-4"
+                  >
+                    {/* Overall score */}
+                    <div className="rounded-2xl border p-6 flex items-center gap-6" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+                      <div className="flex-shrink-0 w-20 h-20 rounded-2xl flex items-center justify-center"
+                        style={{ backgroundColor: scoreColor(analysis.score).bg }}>
+                        <span className="text-3xl font-extrabold" style={{ color: scoreColor(analysis.score).text }}>
+                          {analysis.score}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--ink-3)" }}>ATS Score</p>
+                        <p className="text-sm font-semibold leading-snug" style={{ color: "var(--ink)" }}>{analysis.summary}</p>
+                      </div>
+                    </div>
+
+                    {/* Section scores */}
+                    <div className="space-y-3">
+                      {analysis.sections.map((section) => (
+                        <div key={section.name} className="rounded-2xl border p-5" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold" style={{ color: statusDot(section.status).color }}>
+                                {statusDot(section.status).icon}
+                              </span>
+                              <p className="text-sm font-bold" style={{ color: "var(--ink)" }}>{section.name}</p>
+                            </div>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                              style={{ backgroundColor: scoreColor(section.score).bg, color: scoreColor(section.score).text }}>
+                              {section.score}/100
+                            </span>
+                          </div>
+                          {/* Score bar */}
+                          <div className="w-full h-1.5 rounded-full mb-3" style={{ backgroundColor: "var(--border)" }}>
+                            <div className="h-1.5 rounded-full transition-all duration-700"
+                              style={{ width: `${section.score}%`, backgroundColor: scoreColor(section.score).text }} />
+                          </div>
+                          <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--ink-3)" }}>{section.feedback}</p>
+                          {section.suggestions.length > 0 && (
+                            <ul className="space-y-1">
+                              {section.suggestions.map((s, i) => (
+                                <li key={i} className="text-xs flex gap-2" style={{ color: "var(--ink-2)" }}>
+                                  <span style={{ color: "var(--purple)" }}>→</span>
+                                  {s}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Critical fixes + quick wins */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {analysis.criticalFixes.length > 0 && (
+                        <div className="rounded-2xl border p-5" style={{ backgroundColor: "var(--pink-light)", borderColor: "rgba(240,140,136,0.3)" }}>
+                          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--pink)" }}>Critical fixes</p>
+                          <ul className="space-y-2">
+                            {analysis.criticalFixes.map((f, i) => (
+                              <li key={i} className="text-xs leading-relaxed flex gap-2" style={{ color: "var(--ink-2)" }}>
+                                <span style={{ color: "var(--pink)" }}>!</span>{f}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {analysis.quickWins.length > 0 && (
+                        <div className="rounded-2xl border p-5" style={{ backgroundColor: "var(--mint-light)", borderColor: "rgba(100,200,150,0.3)" }}>
+                          <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--mint)" }}>Quick wins</p>
+                          <ul className="space-y-2">
+                            {analysis.quickWins.map((w, i) => (
+                              <li key={i} className="text-xs leading-relaxed flex gap-2" style={{ color: "var(--ink-2)" }}>
+                                <span style={{ color: "var(--mint)" }}>✓</span>{w}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
           ) : (
             <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
               <div className="flex gap-2 px-5 py-3 border-b" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
@@ -178,4 +380,16 @@ export default function ApplicationDetailPage() {
       </AnimatePresence>
     </div>
   );
+}
+
+function scoreColor(score: number) {
+  if (score >= 75) return { bg: "var(--mint-light)", text: "var(--mint)" };
+  if (score >= 50) return { bg: "var(--peach-light)", text: "var(--peach)" };
+  return { bg: "var(--pink-light)", text: "var(--pink)" };
+}
+
+function statusDot(status: "pass" | "warn" | "fail") {
+  if (status === "pass") return { icon: "●", color: "var(--mint)" };
+  if (status === "warn") return { icon: "●", color: "var(--peach)" };
+  return { icon: "●", color: "var(--pink)" };
 }

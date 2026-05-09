@@ -260,3 +260,110 @@ Return a JSON object with exactly these three keys:
     throw new Error(`Failed to parse Gemini response: ${cleaned.slice(0, 300)}`);
   }
 }
+
+export type AnalysisSection = {
+  name: string;
+  score: number;
+  status: "pass" | "warn" | "fail";
+  feedback: string;
+  suggestions: string[];
+};
+
+export type AnalysisResult = {
+  score: number;
+  summary: string;
+  sections: AnalysisSection[];
+  criticalFixes: string[];
+  quickWins: string[];
+};
+
+export async function analyzeDocument({
+  text,
+  type,
+  jobDesc,
+  jobTitle,
+  company,
+}: {
+  text: string;
+  type: "resume" | "cover_letter";
+  jobDesc: string;
+  jobTitle: string;
+  company: string;
+}): Promise<AnalysisResult> {
+  const resumeSections = `
+Analyze across these 6 categories:
+
+1. KEYWORD ALIGNMENT — Are exact keywords, tool names, and skill names from the job description present? Are they placed contextually inside bullets (not just the skills list)?
+2. QUANTIFICATION RATE — What percentage of experience bullets contain a number ($, %, headcount, timeframe, scale)? Target is 70%+.
+3. BULLET STRUCTURE — Do bullets follow impact-first structure (result → action → context)? Flag any that start with weak openers like "Responsible for", "Helped", "Assisted", "Worked on".
+4. SKILLS SECTION — Is it present and prominent? Does it use exact JD terminology? Are skills listed as standalone nouns without "Expert in / Proficient in" wrappers?
+5. ATS FORMATTING — Any formatting red flags: tables, columns, text boxes, graphics, headers/footers, inconsistent date formats, missing dates, personal pronouns ("I led"), objective statement, "References available"?
+6. AI DETECTION RISK — Does the text contain AI-generation signals: filler phrases ("passionate about", "thrilled to apply", "leverage my skills", "dynamic team", "I would be a great fit"), uniform sentence lengths, overly polished but hollow language?`;
+
+  const coverLetterSections = `
+Analyze across these 6 categories:
+
+1. COMPANY SPECIFICITY — Does the letter contain at least one detail that is provably specific to ${company} (mission, product, recent initiative, something that couldn't be copy-pasted elsewhere)?
+2. KEYWORD INTEGRATION — Are exact keywords from the job description woven naturally into the text (not stuffed)?
+3. ACHIEVEMENT EVIDENCE — Does it include 2-3 concrete achievements with specific numbers that map to the JD requirements?
+4. VOICE & AUTHENTICITY — Does it read like a real human being? Flag AI-generation signals: filler phrases ("passionate about", "thrilled to apply", "leverage my skills", "dynamic team"), uniform sentence rhythm, corporate hollow language.
+5. STRUCTURE & LENGTH — Is it 3-4 short paragraphs, half a page or less? Does it have a strong hook opening (not "I am writing to apply")?
+6. OPENING STRENGTH — Does the first sentence immediately establish relevance and hook the reader?`;
+
+  const prompt = `You are an expert ATS and hiring consultant analyzing a job application document for 2026 screening standards.
+
+ROLE BEING APPLIED FOR: ${jobTitle} at ${company}
+
+JOB DESCRIPTION:
+${jobDesc}
+
+---
+
+DOCUMENT TO ANALYZE (${type === "resume" ? "RESUME" : "COVER LETTER"}):
+${text}
+
+---
+
+${type === "resume" ? resumeSections : coverLetterSections}
+
+For each category return:
+- score: 0-100
+- status: "pass" (75+), "warn" (50-74), "fail" (under 50)
+- feedback: 1-2 sentences on what you found
+- suggestions: 2-3 specific, actionable improvements (not generic advice — reference actual content from the document)
+
+Also return:
+- score: overall weighted score 0-100
+- summary: 2-sentence overall verdict
+- criticalFixes: up to 3 highest-impact changes that would most improve ATS/screening success
+- quickWins: up to 3 easy changes that take under 5 minutes
+
+Return a JSON object with exactly this shape:
+{
+  "score": number,
+  "summary": string,
+  "sections": [{ "name": string, "score": number, "status": "pass"|"warn"|"fail", "feedback": string, "suggestions": string[] }],
+  "criticalFixes": string[],
+  "quickWins": string[]
+}`;
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
+  });
+
+  const result = await model.generateContent(prompt);
+  const raw = result.response.text()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error(`Failed to parse analysis response: ${raw.slice(0, 300)}`);
+  }
+}
+}

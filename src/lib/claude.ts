@@ -135,14 +135,24 @@ Write with confident, precise language. Open by immediately connecting your most
     ? `WEBSITE TONE: High energy, bold personality, fun copy. Use punchy headlines, playful language, first-person voice. Still highlight skills and experience but with flair and enthusiasm.`
     : `WEBSITE TONE: Polished, professional, confident. Clean headlines that communicate value immediately. Concise, achievement-focused copy.`;
 
-  const systemPrompt = `You are an expert job application writer. Study the applicant's past cover letters carefully to understand their unique voice, tone, writing style, and experience. Generate tailored application materials.
+  const systemPrompt = `You are a ghostwriter who has studied this applicant's writing exhaustively. Your job is to write new materials that are indistinguishable from their own hand — someone who knows them personally should read the output and think "yes, that sounds exactly like them."
 
-SAMPLE COVER LETTERS (selected for relevance to this role):
-${pastCoverLetters || "None provided yet."}
+APPLICANT'S PAST COVER LETTERS (study these carefully):
+${pastCoverLetters || "None provided yet — write in a confident, direct, human voice."}
 
-${pastResumes ? `RESUME / EXPERIENCE:\n${pastResumes}` : ""}
+${pastResumes ? `APPLICANT'S PAST RESUMES / EXPERIENCE (use as the factual source of truth for their background):\n${pastResumes}` : ""}
 
-Mirror the applicant's sentence rhythm, word choices, and specific experiences. Be specific and concrete — never generic.`;
+Before generating anything, extract these voice fingerprints from the sample letters:
+1. SENTENCE RHYTHM — do they write in short punchy sentences, longer flowing ones, or a mix? Do they use em-dashes, semicolons, or keep it simple?
+2. VOCABULARY LEVEL — formal/academic, conversational, industry-technical, or casual-professional?
+3. PERSONALITY MARKERS — are they warm and personable, direct and no-nonsense, self-deprecating, enthusiastic? Pick out 3-5 recurring personality traits.
+4. OPENING PATTERNS — how do they typically start a letter? Do they lead with a bold claim, a specific achievement, a question, a story?
+5. HOW THEY DESCRIBE THEIR WORK — do they use "I led", "collaborated with", "built", "drove"? What verbs and framing do they favor?
+6. THINGS THEY NEVER SAY — identify any corporate filler they avoid, any phrases that would feel out of character.
+
+The cover letter and website copy must pass this test: a colleague who has read their past letters should recognize this as authentically theirs. The ATS formatting rules constrain the structure — but the voice, word choices, and personality must be 100% theirs.
+
+The resume uses their real experience and achievements from the samples above. Do not invent roles, companies, or accomplishments — only use what is evidenced in the provided materials.`;
 
   const userPrompt = `Generate application materials for this role:
 
@@ -196,6 +206,8 @@ KEYWORD STRATEGY:
 ---
 
 ${coverLetterToneInstructions}
+
+VOICE RULE (non-negotiable): The cover letter must sound like the applicant wrote it, not like an AI following a template. The ATS rules below are the structural container — the voice extracted from the vault samples is the content. Every sentence should reflect their specific rhythm, vocabulary, and personality. If the vault samples show someone who writes casually and warmly, this letter should too. If they write with dry wit, so should this.
 
 Additional cover letter rules (2026):
 - Plain text, clean paragraphs, no bullet points, no special formatting.

@@ -2,6 +2,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
+// Only use the 15 most recent cover letters to keep context manageable
+const MAX_SAMPLE_DOCS = 15;
+
 export async function generateApplicationMaterials({
   jobDesc,
   jobTitle,
@@ -15,23 +18,24 @@ export async function generateApplicationMaterials({
 }) {
   const pastCoverLetters = documents
     .filter((d) => d.type === "cover_letter")
+    .slice(0, MAX_SAMPLE_DOCS)
     .map((d) => d.content)
     .join("\n\n---\n\n");
 
   const pastResumes = documents
     .filter((d) => d.type === "resume")
+    .slice(0, 3)
     .map((d) => d.content)
     .join("\n\n---\n\n");
 
-  const systemPrompt = `You are an expert job application writer. You have been given samples of the applicant's past cover letters and resumes. Your job is to deeply understand their unique voice, tone, writing style, and experience, then generate tailored application materials for a new role.
+  const systemPrompt = `You are an expert job application writer. Study the applicant's past cover letters carefully to understand their unique voice, tone, writing style, and experience. Generate tailored application materials that sound exactly like them.
 
-PAST COVER LETTERS:
+SAMPLE COVER LETTERS:
 ${pastCoverLetters || "None provided yet."}
 
-PAST RESUMES / EXPERIENCE:
-${pastResumes || "None provided yet."}
+${pastResumes ? `RESUME / EXPERIENCE:\n${pastResumes}` : ""}
 
-Match the applicant's authentic voice precisely. Be specific, confident, and human — never generic or corporate. Mirror their sentence rhythm, word choices, and personality.`;
+Mirror their sentence rhythm, word choices, and personality precisely. Be specific, confident, and human — never generic.`;
 
   const userPrompt = `Generate application materials for this role:
 
@@ -42,17 +46,15 @@ Job Description:
 ${jobDesc}
 
 Return a JSON object with exactly these three keys:
-1. "coverLetter" - A full cover letter (plain text, no markdown headers, natural paragraphs)
-2. "resume" - A tailored resume in plain text format optimized for this role
-3. "websiteHtml" - A complete, self-contained HTML page (single file with inline CSS) that serves as a personal application website for this specific role. Make it visually stunning with a rose/pink/purple gradient aesthetic, animations, and modern design. Include sections: hero with name and role, about/story, key skills relevant to this job, relevant experience highlights, and a call to action. Use the same color palette: rose-400 (#fb7185), pink-400 (#f472b6), purple-400 (#c084fc), with white backgrounds and smooth gradients.
-
-Return only valid JSON, no markdown fences.`;
+- "coverLetter": A full cover letter in plain text, natural paragraphs, no headers
+- "resume": A tailored resume in plain text optimized for this role
+- "websiteHtml": A complete self-contained HTML page with inline CSS only (no external links). Make it visually stunning with a rose/pink/purple gradient aesthetic. Include: hero section with name and target role, about section, key skills for this job, relevant experience, and a contact call to action. Colors: #fb7185 (rose), #f472b6 (pink), #c084fc (purple), white backgrounds.`;
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
-      maxOutputTokens: 8192,
+      maxOutputTokens: 65536,
     },
   });
 
@@ -63,7 +65,6 @@ Return only valid JSON, no markdown fences.`;
 
   const text = result.response.text();
 
-  // Strip markdown fences if present
   const cleaned = text
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/, "")
@@ -74,6 +75,6 @@ Return only valid JSON, no markdown fences.`;
   } catch {
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
-    throw new Error(`Failed to parse Gemini response as JSON: ${cleaned.slice(0, 200)}`);
+    throw new Error(`Failed to parse Gemini response: ${cleaned.slice(0, 300)}`);
   }
 }

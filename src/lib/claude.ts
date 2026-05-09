@@ -48,7 +48,13 @@ Return a JSON object with exactly these three keys:
 
 Return only valid JSON, no markdown fences.`;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: {
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192,
+    },
+  });
 
   const result = await model.generateContent([
     { text: systemPrompt },
@@ -57,11 +63,17 @@ Return only valid JSON, no markdown fences.`;
 
   const text = result.response.text();
 
+  // Strip markdown fences if present
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
   try {
-    return JSON.parse(text);
+    return JSON.parse(cleaned);
   } catch {
-    const match = text.match(/\{[\s\S]*\}/);
+    const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
-    throw new Error("Failed to parse Gemini response as JSON");
+    throw new Error(`Failed to parse Gemini response as JSON: ${cleaned.slice(0, 200)}`);
   }
 }

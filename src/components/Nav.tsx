@@ -38,8 +38,8 @@ export default function Nav() {
       }}
     >
       <div className="flex items-center justify-between w-full max-w-3xl mx-auto">
-        <Link href="/" className="font-extrabold text-lg tracking-tight" style={{ color: "var(--ink)" }}>
-          JobApps
+        <Link href="/">
+          <img src="/logo.png" alt="StgyJobz" className="h-7 w-auto" />
         </Link>
 
         <div className="flex items-center gap-1">

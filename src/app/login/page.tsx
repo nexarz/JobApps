@@ -36,7 +36,7 @@ export default function LoginPage() {
         className="w-full max-w-sm"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2" style={{ color: "var(--ink)" }}>JobApps</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-2" style={{ color: "var(--ink)" }}>StgyJobz</h1>
           <p className="text-sm" style={{ color: "var(--ink-3)" }}>Enter your password to continue</p>
         </div>
 

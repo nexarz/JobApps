@@ -10,7 +10,7 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "JobApps",
+  title: "StgyJobz",
   description: "AI-powered job application generator",
 };
 

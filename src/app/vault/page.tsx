@@ -48,7 +48,7 @@ export default function VaultPage() {
       </FadeIn>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <FadeIn delay={0.05}>
+        <FadeIn delay={0.05} className="min-w-0">
           <form onSubmit={submit} className="rounded-2xl border p-6 space-y-4" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
             <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: "var(--paper-3)" }}>
               {(["cover_letter", "resume"] as const).map((t) => (
@@ -75,7 +75,7 @@ export default function VaultPage() {
               style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
             />
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-0">
               <input
                 placeholder="Company"
                 value={form.company}

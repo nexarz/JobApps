@@ -366,4 +366,3 @@ Return a JSON object with exactly this shape:
     throw new Error(`Failed to parse analysis response: ${raw.slice(0, 300)}`);
   }
 }
-}

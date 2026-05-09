@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh repo *)",
+      "Bash(brew list *)",
+      "Read(//usr/local/bin/**)",
+      "Read(//Users/Steve/Documents/**)",
+      "Read(//Users/Steve/**)",
+      "Bash(git config *)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(brew install *)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(/opt/homebrew/bin/gh api *)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(mkdir -p /Users/Steve/Documents/JobApps/jobapps/src/app/api/applications/\\\\[id\\\\])",
+      "Bash(npm run *)",
+      "Bash(git rm *)",
+      "Bash(rm -rf jobapps/.git)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Fix: add jobapps as files not submodule *)",
+      "Bash(git push *)",
+      "WebFetch(domain:job-apps-ls8behqx0-nexarzs-projects.vercel.app)",
+      "WebFetch(domain:job-apps-vert.vercel.app)",
+      "Bash(npm uninstall *)",
+      "Bash(git commit -m 'Move app to repo root, remove jobapps subdirectory *)"
+    ]
+  }
+}

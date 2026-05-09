@@ -4,7 +4,7 @@ import { generateApplicationMaterials } from "@/lib/claude";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { jobTitle, company, jobUrl, jobDesc } = body;
+  const { jobTitle, company, jobUrl, jobDesc, tone } = body;
 
   if (!jobTitle || !company || !jobDesc) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     jobTitle,
     company,
     documents,
+    tone: tone === "playful" ? "playful" : "professional",
   });
 
   const application = await prisma.application.create({

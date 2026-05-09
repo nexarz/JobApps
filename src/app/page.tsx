@@ -20,22 +20,22 @@ export default function Home() {
       <FadeIn>
         <div className="mb-12">
           <p className="text-sm font-semibold mb-3" style={{ color: "var(--purple)" }}>
-            AI-powered applications
+            your job hunt, but make it iconic
           </p>
           <h1 className="text-4xl font-extrabold tracking-tight mb-3" style={{ color: "var(--ink)", lineHeight: 1.15 }}>
-            Land your<br />dream role.
+            Stop sending<br />copy-paste apps.
           </h1>
           <p className="text-base" style={{ color: "var(--ink-3)" }}>
-            Generate perfectly tailored cover letters, resumes, and personal sites — all in your voice.
+            Drop in a job posting. Get a cover letter, resume, and personal site — written exactly like you, every time.
           </p>
         </div>
       </FadeIn>
 
       <FadeIn delay={0.08}>
         <div className="flex gap-4 mb-10">
-          <Stat value={stats.documents} label="Documents in vault" color="var(--purple)" bg="var(--purple-light)" />
-          <Stat value={stats.applications} label="Applications created" color="var(--pink)" bg="var(--pink-light)" />
-          <Stat value={stats.documents > 0 ? "Ready" : "Empty"} label="Voice model" color="var(--mint)" bg="var(--mint-light)" />
+          <Stat value={stats.documents} label="Docs teaching your voice" color="var(--purple)" bg="var(--purple-light)" />
+          <Stat value={stats.applications} label="Apps sent into the wild" color="var(--pink)" bg="var(--pink-light)" />
+          <Stat value={stats.documents > 0 ? "Locked in 🔥" : "Feed me docs"} label="Voice status" color="var(--mint)" bg="var(--mint-light)" />
         </div>
       </FadeIn>
 
@@ -44,15 +44,15 @@ export default function Home() {
           <ActionCard
             href="/generate"
             icon="✦"
-            title="Generate application"
-            desc="Paste a job description and get a tailored cover letter, resume, and personal site in seconds."
+            title="Generate application →"
+            desc="Paste a job posting, hit go. Cover letter, resume, and a personal site — all sounding like you."
             primary
           />
         </FadeUpItem>
         <FadeUpItem>
           <div className="grid grid-cols-2 gap-3">
-            <ActionCard href="/vault" icon="◈" title="Document vault" desc="Upload past cover letters so the AI learns your voice." />
-            <ActionCard href="/applications" icon="◎" title="Past applications" desc="Browse and download everything you've generated." />
+            <ActionCard href="/vault" icon="◈" title="Feed the vault" desc="The more past letters you add, the more it sounds like you." />
+            <ActionCard href="/applications" icon="◎" title="Past apps" desc="Everything you've fired off — copy, download, revisit." />
           </div>
         </FadeUpItem>
       </FadeUpList>

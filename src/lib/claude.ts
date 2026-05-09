@@ -97,11 +97,13 @@ export async function generateApplicationMaterials({
   jobTitle,
   company,
   documents,
+  tone = "professional",
 }: {
   jobDesc: string;
   jobTitle: string;
   company: string;
   documents: { type: string; content: string }[];
+  tone?: "professional" | "playful";
 }) {
   const allCoverLetters = documents.filter((d) => d.type === "cover_letter");
   const allResumes = documents.filter((d) => d.type === "resume");
@@ -123,14 +125,24 @@ export async function generateApplicationMaterials({
     .map((d) => d.content)
     .join("\n\n---\n\n");
 
-  const systemPrompt = `You are an expert job application writer. Study the applicant's past cover letters carefully to understand their unique voice, tone, writing style, and experience. Generate tailored application materials that sound exactly like them.
+  const coverLetterToneInstructions = tone === "playful"
+    ? `COVER LETTER TONE — PLAYFUL & PERSONALITY-FORWARD:
+Write with energy, wit, and genuine personality. Open with a punchy, memorable hook — not "I am writing to apply for." Be conversational and human. Show enthusiasm for the company specifically. Still include 2-3 specific achievements with metrics, but deliver them with personality rather than corporate stiffness. The goal: a real human being they'd want to meet, not a walking LinkedIn profile.`
+    : `COVER LETTER TONE — PROFESSIONAL & SHARP:
+Write with confident, precise language. Open by immediately connecting your most relevant experience to their specific need — name the role and company in the first sentence. Include 2-3 achievements with concrete metrics (numbers, percentages, timelines) that directly match the job requirements. Mirror exact language and keywords from the job description. Keep paragraphs short and skimmable. Close with a clear, direct call to action.`;
+
+  const websiteToneInstructions = tone === "playful"
+    ? `WEBSITE TONE: High energy, bold personality, fun copy. Use punchy headlines, playful language, first-person voice. Still highlight skills and experience but with flair and enthusiasm.`
+    : `WEBSITE TONE: Polished, professional, confident. Clean headlines that communicate value immediately. Concise, achievement-focused copy.`;
+
+  const systemPrompt = `You are an expert job application writer. Study the applicant's past cover letters carefully to understand their unique voice, tone, writing style, and experience. Generate tailored application materials.
 
 SAMPLE COVER LETTERS (selected for relevance to this role):
 ${pastCoverLetters || "None provided yet."}
 
 ${pastResumes ? `RESUME / EXPERIENCE:\n${pastResumes}` : ""}
 
-Mirror their sentence rhythm, word choices, and personality precisely. Be specific, confident, and human — never generic.`;
+Mirror the applicant's sentence rhythm, word choices, and specific experiences. Be specific and concrete — never generic.`;
 
   const userPrompt = `Generate application materials for this role:
 
@@ -140,10 +152,42 @@ Job Title: ${jobTitle}
 Job Description:
 ${jobDesc}
 
+---
+
+RESUME RULES (always apply — ATS-optimized):
+- Plain text only. No tables, no columns, no icons, no special characters, no decorative elements.
+- Contact info at the top IN the document body (never in a header).
+- Section order: Contact Info → Professional Summary (2-3 lines, keyword-rich) → Skills → Work Experience → Education → Certifications (if any).
+- Skills section: list only hard skills and tools that appear in the job description, as standalone nouns (e.g. "Python, SQL, Figma") — no "Expert in X" phrasing.
+- Work Experience: Company | Title | Date (MM/YYYY). 4–6 bullet points per role. Every bullet must start with a strong action verb + specific outcome + metric (e.g. "Reduced deployment time by 40% by implementing CI/CD pipeline").
+- Embed exact keywords from the job description naturally throughout. Mirror the JD's exact phrasing — if it says "stakeholder engagement," use "stakeholder engagement," not "stakeholder management."
+- Use both the acronym and full form for credentials (e.g. "Project Management Professional (PMP)").
+- Dates in consistent format: MMM YYYY (e.g. Jan 2022).
+- Aim for 1 page if experience allows; 2 pages maximum.
+- Bold must NOT be used (plain text only — bolding is done by the human when formatting).
+
+${coverLetterToneInstructions}
+
+Additional cover letter rules:
+- Plain text, no special formatting, no headers, no bullet points — clean paragraphs only.
+- 3–4 short paragraphs total.
+- Paragraph 1: Hook + name the role + 1-2 relevant keywords from JD used naturally.
+- Paragraph 2: 2–3 achievements with specific numbers that match JD requirements.
+- Paragraph 3: Why this company specifically + culture/mission alignment.
+- Closing: Brief, direct call to action.
+
+${websiteToneInstructions}
+
+Additional website rules:
+- Complete self-contained HTML with inline CSS only (no external links, no CDN).
+- Include: hero section (name + target role), about/intro, key skills (highlight those from JD), relevant experience highlights, contact CTA.
+- Visually stunning: rose/pink/purple gradient aesthetic. Colors: #fb7185 (rose), #f472b6 (pink), #c084fc (purple).
+- Mobile-responsive using CSS only.
+
 Return a JSON object with exactly these three keys:
-- "coverLetter": A full cover letter in plain text, natural paragraphs, no headers
-- "resume": A tailored resume in plain text optimized for this role
-- "websiteHtml": A complete self-contained HTML page with inline CSS only (no external links). Make it visually stunning with a rose/pink/purple gradient aesthetic. Include: hero section with name and target role, about section, key skills for this job, relevant experience, and a contact call to action. Colors: #fb7185 (rose), #f472b6 (pink), #c084fc (purple), white backgrounds.`;
+- "coverLetter": plain text cover letter
+- "resume": plain text ATS-optimized resume
+- "websiteHtml": complete self-contained HTML string`;
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",

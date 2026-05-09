@@ -31,7 +31,7 @@ export default function ApplicationsPage() {
           <div>
             <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Applications</p>
             <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>
-              Past applications
+              Shot your shot
             </h1>
           </div>
           {apps.length > 0 && (
@@ -50,13 +50,13 @@ export default function ApplicationsPage() {
         <FadeIn delay={0.1}>
           <div className="text-center py-20 rounded-2xl border" style={{ borderColor: "var(--border)" }}>
             <div className="text-4xl mb-3">◎</div>
-            <p className="text-sm font-medium mb-4" style={{ color: "var(--ink-3)" }}>No applications yet</p>
+            <p className="text-sm font-medium mb-4" style={{ color: "var(--ink-3)" }}>Nothing here yet — go get that bag</p>
             <Link
               href="/generate"
               className="inline-block px-5 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
               style={{ backgroundColor: "var(--ink)", color: "#fff" }}
             >
-              Generate your first →
+              Fire off your first one →
             </Link>
           </div>
         </FadeIn>

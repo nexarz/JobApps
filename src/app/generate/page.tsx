@@ -6,12 +6,12 @@ import { motion } from "framer-motion";
 
 export default function GeneratePage() {
   const router = useRouter();
-  const [form, setForm] = useState({ jobTitle: "", company: "", jobUrl: "", jobDesc: "" });
+  const [form, setForm] = useState({ jobTitle: "", company: "", jobUrl: "", jobDesc: "", tone: "professional" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(0);
 
-  const steps = ["Reading your vault...", "Selecting relevant letters...", "Writing in your voice...", "Finishing up..."];
+  const steps = ["Digging through your vault...", "Picking your best work...", "Writing like you...", "Almost there..."];
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,10 +42,10 @@ export default function GeneratePage() {
     <div className="max-w-2xl mx-auto px-6 py-12">
       <FadeIn>
         <div className="mb-8">
-          <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Generate</p>
+          <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Let&apos;s get this job</p>
           <h1 className="text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: "var(--ink)" }}>New application</h1>
           <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-            Paste the job posting and we&apos;ll write everything in your voice.
+            Paste the posting, hit generate. We do the rest — sounding exactly like you.
           </p>
         </div>
       </FadeIn>
@@ -87,6 +87,31 @@ export default function GeneratePage() {
           </div>
 
           <div>
+            <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--ink-2)" }}>Cover letter &amp; site tone</label>
+            <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: "var(--paper-3)" }}>
+              {([
+                { value: "professional", label: "Professional", sub: "sharp & credible" },
+                { value: "playful", label: "Playful", sub: "fun & personality-forward" },
+              ] as const).map((t) => (
+                <button
+                  key={t.value} type="button"
+                  onClick={() => setForm((f) => ({ ...f, tone: t.value }))}
+                  className="flex-1 py-2.5 px-3 rounded-lg text-xs font-bold transition-all duration-200 text-left"
+                  style={{
+                    backgroundColor: form.tone === t.value ? "var(--paper)" : "transparent",
+                    color: form.tone === t.value ? "var(--ink)" : "var(--ink-3)",
+                    boxShadow: form.tone === t.value ? "0 1px 4px rgba(26,26,24,0.1)" : "none",
+                  }}
+                >
+                  {t.label}
+                  <span className="block font-medium opacity-60 mt-0.5">{t.sub}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs mt-1.5" style={{ color: "var(--ink-3)" }}>Resume is always ATS-optimized regardless of tone.</p>
+          </div>
+
+          <div>
             <label className="block text-xs font-bold mb-1.5" style={{ color: "var(--ink-2)" }}>Job description *</label>
             <textarea
               required rows={13} value={form.jobDesc}
@@ -114,7 +139,7 @@ export default function GeneratePage() {
                 {steps[step]}
               </span>
             ) : (
-              "Generate application →"
+              "Make it happen →"
             )}
           </button>
 
@@ -131,7 +156,7 @@ export default function GeneratePage() {
                 ))}
               </div>
               <p className="text-xs font-medium" style={{ color: "var(--purple)" }}>
-                This takes about 20–30 seconds
+                Good things take ~20 seconds ✨
               </p>
             </motion.div>
           )}

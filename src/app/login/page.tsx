@@ -37,7 +37,7 @@ export default function LoginPage() {
       >
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight mb-2" style={{ color: "var(--ink)" }}>StgyJobz</h1>
-          <p className="text-sm" style={{ color: "var(--ink-3)" }}>Enter your password to continue</p>
+          <p className="text-sm" style={{ color: "var(--ink-3)" }}>This is a private tool. Who are you? 👀</p>
         </div>
 
         <form onSubmit={submit} className="rounded-2xl border p-8 space-y-4" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>

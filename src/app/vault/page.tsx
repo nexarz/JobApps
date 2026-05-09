@@ -42,7 +42,7 @@ export default function VaultPage() {
           <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Vault</p>
           <h1 className="text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: "var(--ink)" }}>Document vault</h1>
           <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-            The more you add, the better the AI learns your voice. {docs.length > 0 && `${docs.length} documents loaded.`}
+            Every letter you add teaches the AI your voice. The more you feed it, the better it gets.{docs.length > 0 && ` ${docs.length} docs in.`}
           </p>
         </div>
       </FadeIn>

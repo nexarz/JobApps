@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import logo from "../../public/logo.png";
 import { useEffect, useState } from "react";
 
 const links = [
@@ -39,7 +41,7 @@ export default function Nav() {
     >
       <div className="flex items-center justify-between w-full max-w-3xl mx-auto">
         <Link href="/">
-          <img src="/logo.png" alt="StgyJobz" className="h-7 w-auto" />
+          <Image src={logo} alt="StgyJobz" height={28} style={{ width: "auto" }} />
         </Link>
 
         <div className="flex items-center gap-1">

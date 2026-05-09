@@ -2,8 +2,56 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
-// Only use the 15 most recent cover letters to keep context manageable
 const MAX_SAMPLE_DOCS = 15;
+
+// Common words to ignore when scoring relevance
+const STOP_WORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+  "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+  "have", "has", "had", "do", "does", "did", "will", "would", "could",
+  "should", "may", "might", "this", "that", "these", "those", "i", "my",
+  "we", "our", "you", "your", "they", "their", "it", "its", "as", "not",
+  "also", "all", "more", "their", "than", "into", "through", "during",
+  "including", "within", "across", "well", "both", "each", "which", "who",
+]);
+
+function extractKeywords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 3 && !STOP_WORDS.has(w))
+  );
+}
+
+function scoreRelevance(doc: string, keywords: Set<string>): number {
+  const docWords = extractKeywords(doc);
+  let score = 0;
+  for (const kw of keywords) {
+    if (docWords.has(kw)) score++;
+    // Bonus: if the keyword appears multiple times in the raw doc
+    const count = (doc.toLowerCase().match(new RegExp(kw, "g")) || []).length;
+    if (count > 1) score += Math.min(count - 1, 3); // cap bonus at 3
+  }
+  return score;
+}
+
+function selectRelevantDocs(
+  docs: { type: string; content: string }[],
+  jobDesc: string,
+  jobTitle: string,
+  max: number
+): { type: string; content: string }[] {
+  const query = `${jobTitle} ${jobDesc}`;
+  const keywords = extractKeywords(query);
+
+  return docs
+    .map((doc) => ({ doc, score: scoreRelevance(doc.content, keywords) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, max)
+    .map(({ doc }) => doc);
+}
 
 export async function generateApplicationMaterials({
   jobDesc,
@@ -16,21 +64,29 @@ export async function generateApplicationMaterials({
   company: string;
   documents: { type: string; content: string }[];
 }) {
-  const pastCoverLetters = documents
-    .filter((d) => d.type === "cover_letter")
-    .slice(0, MAX_SAMPLE_DOCS)
+  const allCoverLetters = documents.filter((d) => d.type === "cover_letter");
+  const allResumes = documents.filter((d) => d.type === "resume");
+
+  // Pick the most relevant cover letters based on keyword overlap with the job
+  const relevantCoverLetters = selectRelevantDocs(
+    allCoverLetters,
+    jobDesc,
+    jobTitle,
+    MAX_SAMPLE_DOCS
+  );
+
+  const pastCoverLetters = relevantCoverLetters
     .map((d) => d.content)
     .join("\n\n---\n\n");
 
-  const pastResumes = documents
-    .filter((d) => d.type === "resume")
+  const pastResumes = allResumes
     .slice(0, 3)
     .map((d) => d.content)
     .join("\n\n---\n\n");
 
   const systemPrompt = `You are an expert job application writer. Study the applicant's past cover letters carefully to understand their unique voice, tone, writing style, and experience. Generate tailored application materials that sound exactly like them.
 
-SAMPLE COVER LETTERS:
+SAMPLE COVER LETTERS (selected for relevance to this role):
 ${pastCoverLetters || "None provided yet."}
 
 ${pastResumes ? `RESUME / EXPERIENCE:\n${pastResumes}` : ""}

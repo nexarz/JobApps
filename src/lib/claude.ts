@@ -4,16 +4,51 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
 const MAX_SAMPLE_DOCS = 15;
 
-// Common words to ignore when scoring relevance
 const STOP_WORDS = new Set([
   "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
   "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
   "have", "has", "had", "do", "does", "did", "will", "would", "could",
   "should", "may", "might", "this", "that", "these", "those", "i", "my",
   "we", "our", "you", "your", "they", "their", "it", "its", "as", "not",
-  "also", "all", "more", "their", "than", "into", "through", "during",
-  "including", "within", "across", "well", "both", "each", "which", "who",
+  "also", "all", "more", "than", "into", "through", "during", "including",
+  "within", "across", "well", "both", "each", "which", "who", "very",
 ]);
+
+// Lightweight stemmer: reduces words to a common root so "managing",
+// "manager", "management" all match the same stem "manag"
+function stem(word: string): string {
+  // Order matters — longest suffixes first
+  const rules: [RegExp, string][] = [
+    [/ational$/, "ate"],
+    [/tional$/, "tion"],
+    [/ization$/, "ize"],
+    [/iveness$/, "ive"],
+    [/fulness$/, "ful"],
+    [/ousness$/, "ous"],
+    [/alism$/, "al"],
+    [/ation$/, "ate"],
+    [/ities$/, "ity"],
+    [/ment$/, ""],
+    [/ness$/, ""],
+    [/tion$/, "t"],
+    [/ing$/, ""],
+    [/ies$/, "y"],
+    [/ers$/, "er"],
+    [/ed$/, ""],
+    [/ly$/, ""],
+    [/er$/, ""],
+    [/al$/, ""],
+    [/ic$/, ""],
+    [/s$/, ""],
+  ];
+
+  for (const [pattern, replacement] of rules) {
+    if (word.match(pattern) && word.replace(pattern, replacement).length > 3) {
+      return word.replace(pattern, replacement);
+    }
+  }
+  return word;
+}
 
 function extractKeywords(text: string): Set<string> {
   return new Set(
@@ -22,17 +57,21 @@ function extractKeywords(text: string): Set<string> {
       .replace(/[^a-z0-9\s]/g, " ")
       .split(/\s+/)
       .filter((w) => w.length > 3 && !STOP_WORDS.has(w))
+      .map(stem)
   );
 }
 
 function scoreRelevance(doc: string, keywords: Set<string>): number {
-  const docWords = extractKeywords(doc);
+  const docStems = extractKeywords(doc);
+  const docLower = doc.toLowerCase();
   let score = 0;
   for (const kw of keywords) {
-    if (docWords.has(kw)) score++;
-    // Bonus: if the keyword appears multiple times in the raw doc
-    const count = (doc.toLowerCase().match(new RegExp(kw, "g")) || []).length;
-    if (count > 1) score += Math.min(count - 1, 3); // cap bonus at 3
+    if (docStems.has(kw)) {
+      score++;
+      // Bonus for frequency — capped at 3
+      const count = (docLower.match(new RegExp(kw, "g")) || []).length;
+      if (count > 1) score += Math.min(count - 1, 3);
+    }
   }
   return score;
 }

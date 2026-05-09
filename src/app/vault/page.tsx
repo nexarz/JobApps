@@ -49,7 +49,7 @@ export default function VaultPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <FadeIn delay={0.05} className="min-w-0">
-          <form onSubmit={submit} className="rounded-2xl border p-6 space-y-4" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+          <form onSubmit={submit} className="rounded-2xl border p-6 space-y-4 overflow-hidden" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
             <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: "var(--paper-3)" }}>
               {(["cover_letter", "resume"] as const).map((t) => (
                 <button
@@ -80,14 +80,14 @@ export default function VaultPage() {
                 placeholder="Company"
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+                className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
                 style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
               />
               <input
                 placeholder="Role"
                 value={form.role}
                 onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-                className="flex-1 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
+                className="flex-1 min-w-0 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
                 style={{ backgroundColor: "var(--paper)", borderColor: "var(--border)", color: "var(--ink)" }}
               />
             </div>

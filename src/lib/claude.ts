@@ -1,8 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
 export async function generateApplicationMaterials({
   jobDesc,
@@ -50,20 +48,20 @@ Return a JSON object with exactly these three keys:
 
 Return only valid JSON, no markdown fences.`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 8000,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
-  });
+  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const result = await model.generateContent([
+    { text: systemPrompt },
+    { text: userPrompt },
+  ]);
+
+  const text = result.response.text();
 
   try {
     return JSON.parse(text);
   } catch {
     const match = text.match(/\{[\s\S]*\}/);
     if (match) return JSON.parse(match[0]);
-    throw new Error("Failed to parse Claude response as JSON");
+    throw new Error("Failed to parse Gemini response as JSON");
   }
 }

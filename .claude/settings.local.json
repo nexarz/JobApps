@@ -24,7 +24,11 @@
       "WebFetch(domain:job-apps-ls8behqx0-nexarzs-projects.vercel.app)",
       "WebFetch(domain:job-apps-vert.vercel.app)",
       "Bash(npm uninstall *)",
-      "Bash(git commit -m 'Move app to repo root, remove jobapps subdirectory *)"
+      "Bash(git commit -m 'Move app to repo root, remove jobapps subdirectory *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|css|json\\)$\")",
+      "Bash(git commit -m 'Add document seeding: drop cover letters/resumes in /documents and run npm run seed *)",
+      "Bash(git commit -m 'Convert and import 83 cover letters into vault *)",
+      "Bash(git commit -m 'Swap from Anthropic Claude to Google Gemini Pro API *)"
     ]
   }
 }

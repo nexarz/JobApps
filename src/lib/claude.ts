@@ -154,33 +154,64 @@ ${jobDesc}
 
 ---
 
-RESUME RULES (always apply — ATS-optimized):
-- Plain text only. No tables, no columns, no icons, no special characters, no decorative elements.
-- Contact info at the top IN the document body (never in a header).
-- Section order: Contact Info → Professional Summary (2-3 lines, keyword-rich) → Skills → Work Experience → Education → Certifications (if any).
-- Skills section: list only hard skills and tools that appear in the job description, as standalone nouns (e.g. "Python, SQL, Figma") — no "Expert in X" phrasing.
-- Work Experience: Company | Title | Date (MM/YYYY). 4–6 bullet points per role. Every bullet must start with a strong action verb + specific outcome + metric (e.g. "Reduced deployment time by 40% by implementing CI/CD pipeline").
-- Embed exact keywords from the job description naturally throughout. Mirror the JD's exact phrasing — if it says "stakeholder engagement," use "stakeholder engagement," not "stakeholder management."
-- Use both the acronym and full form for credentials (e.g. "Project Management Professional (PMP)").
-- Dates in consistent format: MMM YYYY (e.g. Jan 2022).
-- Aim for 1 page if experience allows; 2 pages maximum.
-- Bold must NOT be used (plain text only — bolding is done by the human when formatting).
+RESUME RULES (always ATS + LLM-screener optimized for 2026):
+
+FORMATTING:
+- Plain text only. No tables, no columns, no icons, no graphics, no special characters, no decorative elements.
+- Contact info at top IN the document body (never in a header/footer — parsers skip those).
+- Section labels must be standard exact strings: "Professional Summary", "Skills", "Work Experience", "Education", "Certifications".
+- Dates in consistent format: MMM YYYY (e.g. Jan 2022). Missing dates trigger auto-rejection in modern ATS.
+- No personal pronouns ("I led..." → "Led...").
+- No objective statement. No "References available upon request."
+- Length: 1 page for under 5 years experience, 2 pages max for mid-career.
+
+SECTION ORDER (this order is scored by ATS skills-first filtering):
+1. Contact Info
+2. Professional Summary (2-3 sentences: who you are + 3-5 exact keywords from this specific JD)
+3. Skills (this is the FIRST gate — many systems score this before reading work history)
+4. Work Experience
+5. Education
+6. Certifications (if any)
+
+SKILLS SECTION:
+- List only hard skills, tools, platforms, and certifications that appear in the job description.
+- Use the JD's exact names — if it says "Salesforce" write "Salesforce" not "CRM software."
+- Format: plain comma-separated or line-separated nouns. No "Expert in X" or "Proficient in Y."
+- Include any AI/modern tools relevant to the role (expected in 2026 even for non-technical roles).
+
+WORK EXPERIENCE BULLETS:
+- "Impact first" structure: result → action → context. E.g. "Reduced churn by 23% by redesigning onboarding flow for 50K users" — NOT "Redesigned onboarding flow which reduced churn."
+- 70%+ of bullets must contain a number ($, %, headcount, timeframe, scale).
+- 4–6 bullets per role, most recent role gets the most.
+- Embed exact JD keywords contextually inside bullets — a keyword used in a quantified bullet scores significantly higher than the same keyword in the skills list alone.
+- Use both acronym and full form for credentials once (e.g. "Project Management Professional (PMP)").
+- Lead with strong action verbs. Avoid weak openers: "Responsible for", "Helped", "Assisted", "Worked on."
+
+KEYWORD STRATEGY:
+- Extract the JD's exact hard skill names, tool names, certification names, and culture/methodology phrases.
+- Each key term should appear: (a) in the Skills section by exact name, AND (b) at least once in a quantified experience bullet with context.
+- Mirror the JD's exact phrasing everywhere — do not substitute synonyms.
+- Do NOT stuff keywords — an LLM screening layer will penalize a skills list disconnected from actual experience.
+
+---
 
 ${coverLetterToneInstructions}
 
-Additional cover letter rules:
-- Plain text, no special formatting, no headers, no bullet points — clean paragraphs only.
-- 3–4 short paragraphs total.
-- Paragraph 1: Hook + name the role + 1-2 relevant keywords from JD used naturally.
-- Paragraph 2: 2–3 achievements with specific numbers that match JD requirements.
-- Paragraph 3: Why this company specifically + culture/mission alignment.
-- Closing: Brief, direct call to action.
+Additional cover letter rules (2026):
+- Plain text, clean paragraphs, no bullet points, no special formatting.
+- 3–4 short paragraphs, half a page or less — 70% of hiring managers prefer this length.
+- CRITICAL: Must be provably specific to this company and role. Include at least one detail about ${company} that proves this was written for them — their mission, product, a recent initiative, what makes them distinct. Generic letters are immediately dismissed.
+- Paragraph 1: Specific hook + name the role + why THIS company (not any company).
+- Paragraph 2: 2–3 achievements with concrete numbers that directly map to the JD's stated requirements.
+- Paragraph 3: Something the resume can't say — a perspective on where the industry is going, how you'd approach a challenge they face, or what excites you about their specific work.
+- Closing: One sentence, direct call to action.
+- CRITICAL: Must sound like a real human being wrote it. 43% of large employers now run AI detection. Write with natural sentence variety — mix short punchy sentences with longer ones. Avoid corporate filler phrases like "I am passionate about", "I would be a great fit", "leverage my skills", "thrilled to apply", "dynamic team." Write how an articulate, confident person actually speaks.
 
 ${websiteToneInstructions}
 
 Additional website rules:
 - Complete self-contained HTML with inline CSS only (no external links, no CDN).
-- Include: hero section (name + target role), about/intro, key skills (highlight those from JD), relevant experience highlights, contact CTA.
+- Include: hero section (name + target role at ${company}), about/intro, key skills matching the JD, 2-3 experience highlights with impact numbers, contact CTA.
 - Visually stunning: rose/pink/purple gradient aesthetic. Colors: #fb7185 (rose), #f472b6 (pink), #c084fc (purple).
 - Mobile-responsive using CSS only.
 

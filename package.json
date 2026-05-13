@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "create-user": "tsx scripts/create-user.ts",
+    "assign-user": "tsx scripts/assign-user.ts",
+    "check-users": "tsx scripts/check-users.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

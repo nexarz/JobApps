@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FadeIn } from "@/components/FadeUp";
 import { motion } from "framer-motion";
@@ -7,6 +7,17 @@ import { motion } from "framer-motion";
 export default function GeneratePage() {
   const router = useRouter();
   const [form, setForm] = useState({ jobTitle: "", company: "", jobUrl: "", jobDesc: "", tone: "professional" });
+
+  useEffect(() => {
+    const pending = sessionStorage.getItem("pendingJob");
+    if (pending) {
+      try {
+        const job = JSON.parse(pending);
+        setForm(f => ({ ...f, ...job }));
+        sessionStorage.removeItem("pendingJob");
+      } catch { /* ignore */ }
+    }
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(0);

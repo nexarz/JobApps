@@ -261,6 +261,58 @@ Return a JSON object with exactly these three keys:
   }
 }
 
+export type JobSuggestion = {
+  query: string;       // Adzuna search term e.g. "community engagement manager"
+  label: string;       // Human-readable e.g. "Community Engagement Manager"
+  rationale: string;   // 1 sentence why this fits
+};
+
+export async function suggestJobsFromVault(
+  documents: { type: string; content: string }[]
+): Promise<JobSuggestion[]> {
+  if (documents.length === 0) return [];
+
+  const sample = documents
+    .slice(0, 10)
+    .map((d) => d.content.slice(0, 800))
+    .join("\n\n---\n\n");
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 },
+  });
+
+  const result = await model.generateContent(`
+You are a career advisor. Study these excerpts from a person's cover letters and resumes and identify the most suitable job roles for them to search for right now.
+
+DOCUMENTS:
+${sample}
+
+Return a JSON array of exactly 4 job suggestions. Each should be a distinct role that genuinely fits their background. Vary the seniority and angle.
+
+Format:
+[
+  {
+    "query": "short adzuna search string, 2-4 words, lowercase",
+    "label": "Human Readable Title",
+    "rationale": "One sentence explaining why this fits their background"
+  }
+]`);
+
+  const raw = result.response.text()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) return JSON.parse(match[0]);
+    return [];
+  }
+}
+
 export type AnalysisSection = {
   name: string;
   score: number;

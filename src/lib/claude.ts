@@ -98,12 +98,14 @@ export async function generateApplicationMaterials({
   company,
   documents,
   tone = "professional",
+  companyContext,
 }: {
   jobDesc: string;
   jobTitle: string;
   company: string;
   documents: { type: string; content: string }[];
   tone?: "professional" | "playful";
+  companyContext?: string;
 }) {
   const allCoverLetters = documents.filter((d) => d.type === "cover_letter");
   const allResumes = documents.filter((d) => d.type === "resume");
@@ -154,13 +156,17 @@ The cover letter and website copy must pass this test: a colleague who has read 
 
 The resume uses their real experience and achievements from the samples above. Do not invent roles, companies, or accomplishments — only use what is evidenced in the provided materials.`;
 
+  const companyBlock = companyContext
+    ? `\n\nCOMPANY RESEARCH (verified context — use this to make the cover letter and website provably specific to ${company}; never invent details not present here):\n${companyContext}`
+    : "";
+
   const userPrompt = `Generate application materials for this role:
 
 Company: ${company}
 Job Title: ${jobTitle}
 
 Job Description:
-${jobDesc}
+${jobDesc}${companyBlock}
 
 ---
 
@@ -265,10 +271,16 @@ export type JobSuggestion = {
   query: string;       // Adzuna search term e.g. "community engagement manager"
   label: string;       // Human-readable e.g. "Community Engagement Manager"
   rationale: string;   // 1 sentence why this fits
+  seniority?: string;  // "entry" | "mid" | "senior" | "lead" — used to widen/narrow Adzuna
 };
 
 export async function suggestJobsFromVault(
-  documents: { type: string; content: string }[]
+  documents: { type: string; content: string }[],
+  prefs: {
+    location?: string | null;
+    remotePref?: string | null;     // "any" | "remote_only" | "hybrid_ok" | "onsite_only"
+    experienceYears?: number | null;
+  } = {}
 ): Promise<JobSuggestion[]> {
   if (documents.length === 0) return [];
 
@@ -282,20 +294,40 @@ export async function suggestJobsFromVault(
     generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 },
   });
 
+  const prefsBlock: string[] = [];
+  if (prefs.location) prefsBlock.push(`- Location: ${prefs.location}`);
+  if (prefs.remotePref) prefsBlock.push(`- Remote preference: ${prefs.remotePref.replace(/_/g, " ")}`);
+  if (typeof prefs.experienceYears === "number") prefsBlock.push(`- Years of experience: ${prefs.experienceYears}`);
+
+  const seniorityHint = typeof prefs.experienceYears === "number"
+    ? prefs.experienceYears < 2 ? "entry"
+      : prefs.experienceYears < 5 ? "mid"
+      : prefs.experienceYears < 9 ? "senior"
+      : "lead"
+    : null;
+
   const result = await model.generateContent(`
 You are a career advisor. Study these excerpts from a person's cover letters and resumes and identify the most suitable job roles for them to search for right now.
 
 DOCUMENTS:
 ${sample}
 
-Return a JSON array of exactly 4 job suggestions. Each should be a distinct role that genuinely fits their background. Vary the seniority and angle.
+${prefsBlock.length ? `APPLICANT PREFERENCES:\n${prefsBlock.join("\n")}\n` : ""}
+Return a JSON array of exactly 4 job suggestions that genuinely fit the background AND the preferences above. Vary the angle (e.g. one stretch role, one obvious fit, one adjacent pivot, one specialist niche).
+
+The "query" field is critical — it is passed verbatim to a job board search:
+- 2-4 words, lowercase, no punctuation
+- Use canonical industry titles that appear in real job postings (e.g. "product marketing manager" not "growth storyteller")
+- If experience is known, calibrate seniority${seniorityHint ? ` (target around "${seniorityHint}")` : ""}
+- Do NOT include location in the query — location is handled separately
 
 Format:
 [
   {
-    "query": "short adzuna search string, 2-4 words, lowercase",
+    "query": "canonical job title, 2-4 lowercase words",
     "label": "Human Readable Title",
-    "rationale": "One sentence explaining why this fits their background"
+    "rationale": "One sentence explaining why this fits their background and stated preferences",
+    "seniority": "entry" | "mid" | "senior" | "lead"
   }
 ]`);
 
@@ -310,6 +342,117 @@ Format:
     const match = raw.match(/\[[\s\S]*\]/);
     if (match) return JSON.parse(match[0]);
     return [];
+  }
+}
+
+export type InterviewQuestion = {
+  question: string;
+  category: string;          // "behavioral" | "technical" | "company-specific" | "role-specific" | "situational"
+  whyAsked: string;          // Why this question is likely at this stage
+  approach: string;          // How to structure the answer (STAR, framework, etc.)
+  draftAnswer?: string;      // Optional scaffolded answer using vault context
+};
+
+export type InterviewPrepContent = {
+  stageOverview: string;     // What to expect at this stage
+  tips: string[];            // Stage-specific tips
+  questions: InterviewQuestion[];
+  questionsToAsk: string[];  // Questions the candidate should ask the interviewer
+  redFlags: string[];        // What to watch out for
+  preparation: string[];     // What to do in the 24h before
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  recruiter_screen: "Recruiter / phone screen",
+  hiring_manager: "Hiring manager interview",
+  technical: "Technical interview",
+  onsite: "Onsite / panel",
+  exec: "Executive / final round",
+  behavioral: "Behavioral interview",
+};
+
+export async function generateInterviewPrep({
+  stage,
+  jobTitle,
+  company,
+  jobDesc,
+  vaultSample,
+  companyContext,
+}: {
+  stage: string;
+  jobTitle: string;
+  company: string;
+  jobDesc: string;
+  vaultSample: string;
+  companyContext?: string;
+}): Promise<InterviewPrepContent> {
+  const stageLabel = STAGE_LABELS[stage] ?? stage;
+
+  const stageGuidance: Record<string, string> = {
+    recruiter_screen: "Recruiter screens are 20-30 min, non-technical, focused on motivation, salary, logistics, and high-level fit. Questions tend to be open-ended ('tell me about yourself'), filtering for red flags before passing to the hiring manager.",
+    hiring_manager: "Hiring manager interviews dig into role-specific experience and judgment. Expect questions about how you'd handle real situations from this team, your management style (if applicable), and why this company specifically. They are evaluating whether you can do the job AND whether they want to work with you.",
+    technical: "Technical interviews assess depth of skill in the role's core domain. Expect specific scenarios, case-based questions, system design or live problem-solving, and probes for trade-off thinking. Show your reasoning, not just the answer.",
+    onsite: "Onsite/panel rounds combine multiple interviewers across behavioral, technical, and cross-functional fit. Each interviewer typically has a focus area. Endurance and consistency matter — the same story may be asked twice.",
+    exec: "Exec / final-round interviews assess strategic thinking, ambition, and culture-add at a senior level. Less 'can you do the job' and more 'do you have judgment, vision, and presence'. Expect open-ended business questions.",
+    behavioral: "Behavioral rounds use the STAR framework (Situation, Task, Action, Result) to probe past experience as a predictor of future performance. Prepare 6-8 vivid stories that flex to multiple questions.",
+  };
+
+  const prompt = `You are an interview coach preparing a candidate for a specific stage of a real interview process.
+
+ROLE: ${jobTitle} at ${company}
+STAGE: ${stageLabel}
+
+JOB DESCRIPTION:
+${jobDesc}
+
+${companyContext ? `COMPANY RESEARCH:\n${companyContext}\n` : ""}
+${vaultSample ? `CANDIDATE BACKGROUND (excerpts from their resume/cover letters — use as factual source for draft answers):\n${vaultSample}\n` : ""}
+STAGE CONTEXT:
+${stageGuidance[stage] ?? "General interview stage."}
+
+Generate a focused prep guide. Be specific to THIS company, THIS role, and THIS stage — generic advice is useless.
+
+For questions:
+- 8-10 questions total
+- Mix of categories: company-specific (referencing the actual company), role-specific (from the JD), behavioral (drawing on candidate's background), and at least 2 stage-appropriate curveballs
+- For each, explain why it would be asked at this stage AND give an approach
+- For 3-4 of the most important ones, draft an answer using the candidate's actual background — flag it as a draft they should adapt
+
+Return JSON with this exact shape:
+{
+  "stageOverview": "2-3 sentence summary of what to expect at this stage with this company",
+  "tips": ["3-5 stage-specific tips, each one sentence and actionable"],
+  "questions": [
+    {
+      "question": "the question",
+      "category": "behavioral | technical | company-specific | role-specific | situational",
+      "whyAsked": "1 sentence on why this question shows up at this stage",
+      "approach": "1-2 sentences on how to structure the answer",
+      "draftAnswer": "optional draft using candidate's background, 3-5 sentences"
+    }
+  ],
+  "questionsToAsk": ["4-5 thoughtful questions the candidate should ask the interviewer — specific to the company and stage"],
+  "redFlags": ["2-3 things to watch out for in this interview that might signal a bad role"],
+  "preparation": ["4-5 concrete things to do in the 24h before the interview"]
+}`;
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
+  });
+
+  const result = await model.generateContent(prompt);
+  const raw = result.response.text()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error(`Failed to parse interview prep response: ${raw.slice(0, 300)}`);
   }
 }
 

@@ -8,12 +8,16 @@ generator client {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  username     String        @unique
-  passwordHash String
-  createdAt    DateTime      @default(now())
-  documents    Document[]
-  applications Application[]
+  id              String        @id @default(cuid())
+  username        String        @unique
+  passwordHash    String
+  createdAt       DateTime      @default(now())
+  // Search preferences — used to tailor job suggestions
+  location        String?
+  remotePref      String?       // "any" | "remote_only" | "hybrid_ok" | "onsite_only"
+  experienceYears Int?
+  documents       Document[]
+  applications    Application[]
 }
 
 model Document {
@@ -28,16 +32,69 @@ model Document {
   user      User?    @relation(fields: [userId], references: [id])
 }
 
+model CompanyProfile {
+  id             String        @id @default(cuid())
+  name           String
+  normalizedName String        @unique // lowercased + trimmed for cache lookup
+  website        String?
+  summary        String?       // 2-3 sentence overview
+  mission        String?
+  products       String?       // what they make / do
+  techStack      String?       // free-text or comma-separated
+  values         String?
+  culture        String?
+  recentNews     String?       // recent launches, funding, leadership changes
+  sources        String?       // JSON array of URLs the research came from
+  researchedAt   DateTime      @default(now())
+  applications   Application[]
+}
+
 model Application {
-  id          String   @id @default(cuid())
-  jobTitle    String
-  company     String
-  jobUrl      String?
-  jobDesc     String
-  coverLetter String
-  resume      String
-  websiteHtml String
-  createdAt   DateTime @default(now())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
+  id               String              @id @default(cuid())
+  jobTitle         String
+  company          String
+  jobUrl           String?
+  jobDesc          String
+  coverLetter      String
+  resume           String
+  websiteHtml      String
+  // Tracking fields
+  status           String              @default("saved") // saved | applied | screening | interview | offer | rejected | ghosted | withdrawn
+  currentStage     String?             // e.g. "Recruiter screen", "Hiring manager interview", "Onsite"
+  appliedAt        DateTime?
+  location         String?
+  remote           Boolean?
+  salaryMin        Int?
+  salaryMax        Int?
+  notes            String?
+  lastActivityAt   DateTime            @default(now())
+  createdAt        DateTime            @default(now())
+  userId           String?
+  user             User?               @relation(fields: [userId], references: [id])
+  companyProfileId String?
+  companyProfile   CompanyProfile?     @relation(fields: [companyProfileId], references: [id])
+  events           ApplicationEvent[]
+  interviewPreps   InterviewPrep[]
+}
+
+model ApplicationEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  type          String      // status_change | note | interview_scheduled | interview_completed | offer | rejection
+  title         String
+  notes         String?
+  fromStatus    String?
+  toStatus      String?
+  occurredAt    DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+}
+
+model InterviewPrep {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  stage         String      // "recruiter_screen" | "hiring_manager" | "technical" | "onsite" | "exec" | "behavioral"
+  content       String      // JSON: { questions: [...], tips: [...], focusAreas: [...] }
+  createdAt     DateTime    @default(now())
 }

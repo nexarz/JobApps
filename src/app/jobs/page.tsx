@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeIn, FadeUpList, FadeUpItem } from "@/components/FadeUp";
@@ -14,6 +14,7 @@ const COUNTRIES = [
 ];
 
 type SuggestedGroup = { suggestion: JobSuggestion; jobs: AdzunaJob[] };
+type AppliedPrefs = { where: string; remoteOnly: boolean; experienceYears: number | null };
 
 function formatSalary(min?: number, max?: number) {
   if (!min && !max) return null;
@@ -78,13 +79,14 @@ function JobCard({ job, onGenerate }: { job: AdzunaJob; onGenerate: (job: Adzuna
 export default function JobsPage() {
   const router = useRouter();
   const [country, setCountry] = useState("ca");
+  const [where, setWhere] = useState("");
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [appliedPrefs, setAppliedPrefs] = useState<AppliedPrefs | null>(null);
 
-  // Suggested (vault-based) state
   const [groups, setGroups] = useState<SuggestedGroup[]>([]);
   const [suggesting, setSuggesting] = useState(true);
   const [suggestError, setSuggestError] = useState("");
 
-  // Manual search state
   const [searchForm, setSearchForm] = useState({ q: "", where: "" });
   const [searchResults, setSearchResults] = useState<AdzunaJob[]>([]);
   const [searchTotal, setSearchTotal] = useState(0);
@@ -92,32 +94,40 @@ export default function JobsPage() {
   const [searchError, setSearchError] = useState("");
   const [searched, setSearched] = useState(false);
 
-  // Load vault-based suggestions on mount
-  useEffect(() => {
-    loadSuggestions("ca");
-  }, []);
-
-  const loadSuggestions = async (c: string) => {
+  const loadSuggestions = useCallback(async () => {
     setSuggesting(true);
     setSuggestError("");
     try {
-      const res = await fetch(`/api/jobs/suggest?country=${c}`);
+      const params = new URLSearchParams({ country });
+      if (where.trim()) params.set("where", where.trim());
+      if (remoteOnly) params.set("remote", "1");
+      const res = await fetch(`/api/jobs/suggest?${params}`);
       if (!res.ok) throw new Error((await res.json()).error);
       const data = await res.json();
       setGroups(data.groups);
+      setAppliedPrefs(data.appliedPrefs ?? null);
     } catch (err) {
       setSuggestError(err instanceof Error ? err.message : "Failed to load suggestions");
     } finally {
       setSuggesting(false);
     }
-  };
+  }, [country, where, remoteOnly]);
 
-  const handleCountryChange = (c: string) => {
-    setCountry(c);
-    setSearched(false);
-    setSearchResults([]);
-    loadSuggestions(c);
-  };
+  // Initial load — fetch stored prefs to prefill location/remote, then suggest
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/user/preferences");
+        if (r.ok) {
+          const p = await r.json();
+          if (p.location) setWhere(p.location);
+          if (p.remotePref === "remote_only") setRemoteOnly(true);
+        }
+      } catch {}
+      loadSuggestions();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const search = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,7 +135,8 @@ export default function JobsPage() {
     setSearchError("");
     setSearchResults([]);
     try {
-      const params = new URLSearchParams({ q: searchForm.q, where: searchForm.where, country });
+      const params = new URLSearchParams({ q: searchForm.q, where: searchForm.where || where, country });
+      if (remoteOnly) params.set("remote", "1");
       const res = await fetch(`/api/jobs/search?${params}`);
       if (!res.ok) throw new Error((await res.json()).error);
       const data = await res.json();
@@ -145,6 +156,10 @@ export default function JobsPage() {
       company: job.company,
       jobUrl: job.url,
       jobDesc: job.description,
+      location: job.location,
+      remote: /remote|work from home|wfh|anywhere/i.test(`${job.title} ${job.description} ${job.location}`),
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
     }));
     router.push("/generate");
   };
@@ -156,17 +171,16 @@ export default function JobsPage() {
           <p className="text-sm font-semibold mb-1" style={{ color: "var(--purple)" }}>Based on your vault</p>
           <h1 className="text-3xl font-extrabold tracking-tight mb-1.5" style={{ color: "var(--ink)" }}>Jobs for you</h1>
           <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-            Roles that match your background — click Generate to apply in seconds.
+            Tailored to your experience and preferences. Edit defaults in <a href="/settings" className="underline" style={{ color: "var(--purple)" }}>settings</a>.
           </p>
         </div>
 
-        {/* Country selector */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
           <div className="flex gap-1 p-1 rounded-xl" style={{ backgroundColor: "var(--paper-3)" }}>
             {COUNTRIES.map((c) => (
               <button
                 key={c.value}
-                onClick={() => handleCountryChange(c.value)}
+                onClick={() => setCountry(c.value)}
                 className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
                 style={{
                   backgroundColor: country === c.value ? "var(--paper)" : "transparent",
@@ -178,10 +192,43 @@ export default function JobsPage() {
               </button>
             ))}
           </div>
+
+          <input
+            value={where}
+            onChange={(e) => setWhere(e.target.value)}
+            placeholder="City or region"
+            className="rounded-xl px-3 py-2 text-xs outline-none border w-44"
+            style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", color: "var(--ink)" }}
+          />
+
+          <label className="flex items-center gap-2 text-xs font-semibold cursor-pointer" style={{ color: "var(--ink-2)" }}>
+            <input
+              type="checkbox"
+              checked={remoteOnly}
+              onChange={(e) => setRemoteOnly(e.target.checked)}
+            />
+            Remote only
+          </label>
+
+          <button
+            onClick={loadSuggestions}
+            disabled={suggesting}
+            className="ml-auto px-3 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 disabled:opacity-60"
+            style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+          >
+            {suggesting ? "Refreshing..." : "Refresh"}
+          </button>
         </div>
+
+        {appliedPrefs && !suggesting && (
+          <p className="text-xs mb-6" style={{ color: "var(--ink-3)" }}>
+            Showing {appliedPrefs.remoteOnly ? "remote" : "all"} roles
+            {appliedPrefs.where ? ` in ${appliedPrefs.where}` : ""}
+            {typeof appliedPrefs.experienceYears === "number" ? ` · calibrated to ${appliedPrefs.experienceYears}y experience` : ""}
+          </p>
+        )}
       </FadeIn>
 
-      {/* Vault-based suggestions */}
       {suggesting ? (
         <FadeIn>
           <div className="space-y-4 mb-10">
@@ -203,7 +250,7 @@ export default function JobsPage() {
       ) : groups.length === 0 ? (
         <FadeIn>
           <div className="text-center py-10 rounded-2xl border mb-8" style={{ borderColor: "var(--border)" }}>
-            <p className="text-sm" style={{ color: "var(--ink-3)" }}>Add documents to your vault to get personalised suggestions.</p>
+            <p className="text-sm" style={{ color: "var(--ink-3)" }}>No results — try widening location or turning off the remote-only filter.</p>
           </div>
         </FadeIn>
       ) : (
@@ -215,6 +262,7 @@ export default function JobsPage() {
                   <div>
                     <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: "var(--purple)" }}>
                       {suggestion.label}
+                      {suggestion.seniority && <span className="ml-2 font-normal lowercase" style={{ color: "var(--ink-3)" }}>· {suggestion.seniority}</span>}
                     </p>
                     <p className="text-xs" style={{ color: "var(--ink-3)" }}>{suggestion.rationale}</p>
                   </div>
@@ -230,7 +278,6 @@ export default function JobsPage() {
         </FadeUpList>
       )}
 
-      {/* Manual search */}
       <FadeIn delay={0.1}>
         <div className="border-t pt-8" style={{ borderColor: "var(--border)" }}>
           <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "var(--ink-3)" }}>Search manually</p>
@@ -245,7 +292,7 @@ export default function JobsPage() {
             <input
               value={searchForm.where}
               onChange={(e) => setSearchForm(f => ({ ...f, where: e.target.value }))}
-              placeholder="Location"
+              placeholder={where || "Location"}
               className="w-36 rounded-xl px-4 py-2.5 text-sm outline-none border transition-all"
               style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", color: "var(--ink)" }}
             />

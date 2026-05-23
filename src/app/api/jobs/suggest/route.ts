@@ -2,67 +2,58 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { suggestJobsFromVault } from "@/lib/claude";
-import type { AdzunaJob } from "../search/route";
-
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-async function searchAdzuna(query: string, country: string): Promise<AdzunaJob[]> {
-  const appId = process.env.ADZUNA_APP_ID;
-  const appKey = process.env.ADZUNA_APP_KEY;
-  if (!appId || !appKey) return [];
-
-  const params = new URLSearchParams({
-    app_id: appId,
-    app_key: appKey,
-    results_per_page: "8",
-    what: query,
-    "content-type": "application/json",
-  });
-
-  const res = await fetch(`https://api.adzuna.com/v1/api/jobs/${country}/search/1?${params}`);
-  if (!res.ok) return [];
-  const data = await res.json();
-
-  return (data.results ?? []).map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    title: r.title as string,
-    company: (r.company as { display_name: string })?.display_name ?? "Unknown",
-    location: (r.location as { display_name: string })?.display_name ?? "",
-    description: stripHtml((r.description as string) ?? ""),
-    url: r.redirect_url as string,
-    salaryMin: r.salary_min as number | undefined,
-    salaryMax: r.salary_max as number | undefined,
-    postedAt: r.created as string,
-  }));
-}
+import { searchJSearch } from "../search/route";
 
 export async function GET(req: NextRequest) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const country = new URL(req.url).searchParams.get("country") ?? "ca";
+  const { searchParams } = new URL(req.url);
+  const country = searchParams.get("country") ?? "ca";
+  const whereParam = searchParams.get("where");
+  const remoteParam = searchParams.get("remote");
 
-  const documents = await prisma.document.findMany({ where: { userId } });
+  const [documents, user] = await Promise.all([
+    prisma.document.findMany({ where: { userId } }),
+    prisma.user.findUnique({ where: { id: userId } }),
+  ]);
 
   if (documents.length === 0) {
     return NextResponse.json({ suggestions: [], groups: [] });
   }
 
-  // Get 4 role suggestions from Gemini based on vault
-  const suggestions = await suggestJobsFromVault(documents);
+  const where = whereParam ?? user?.location ?? "";
+  const remoteOnly = remoteParam === "1" || user?.remotePref === "remote_only";
 
-  // Search Adzuna for each suggestion in parallel
+  const suggestions = await suggestJobsFromVault(documents, {
+    location: where || null,
+    remotePref: remoteParam === "1" ? "remote_only" : user?.remotePref ?? null,
+    experienceYears: user?.experienceYears ?? null,
+  });
+
+  // Run JSearch in parallel for each suggested query
   const groups = await Promise.all(
-    suggestions.map(async (s) => ({
-      suggestion: s,
-      jobs: await searchAdzuna(s.query, country),
-    }))
+    suggestions.map(async (s) => {
+      try {
+        const jobs = await searchJSearch({
+          query: s.query,
+          country,
+          remoteOnly,
+          where: where || undefined,
+          limit: 8,
+        });
+        return { suggestion: s, jobs };
+      } catch {
+        return { suggestion: s, jobs: [] };
+      }
+    })
   );
 
-  // Only return groups that have results
   const filtered = groups.filter((g) => g.jobs.length > 0);
 
-  return NextResponse.json({ suggestions, groups: filtered });
+  return NextResponse.json({
+    suggestions,
+    groups: filtered,
+    appliedPrefs: { where, remoteOnly, experienceYears: user?.experienceYears ?? null },
+  });
 }

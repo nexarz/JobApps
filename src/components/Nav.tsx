@@ -11,6 +11,7 @@ const links = [
   { href: "/jobs", label: "Jobs" },
   { href: "/generate", label: "Generate" },
   { href: "/applications", label: "Applications" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function Nav() {

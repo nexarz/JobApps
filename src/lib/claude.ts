@@ -343,8 +343,7 @@ Format:
     if (match) {
       try { return JSON.parse(match[0]); } catch {}
     }
-    console.error("[suggestJobsFromVault] Failed to parse Gemini response:", raw.slice(0, 500));
-    return [];
+    throw new Error(`SUGGEST_PARSE_FAIL: ${raw.slice(0, 400)}`);
   }
 }
 

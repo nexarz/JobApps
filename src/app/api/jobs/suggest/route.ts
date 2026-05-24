@@ -25,11 +25,17 @@ export async function GET(req: NextRequest) {
   const where = whereParam ?? user?.location ?? "";
   const remoteOnly = remoteParam === "1" || user?.remotePref === "remote_only";
 
-  const suggestions = await suggestJobsFromVault(documents, {
-    location: where || null,
-    remotePref: remoteParam === "1" ? "remote_only" : user?.remotePref ?? null,
-    experienceYears: user?.experienceYears ?? null,
-  });
+  let suggestions: Awaited<ReturnType<typeof suggestJobsFromVault>> = [];
+  let suggestError: string | null = null;
+  try {
+    suggestions = await suggestJobsFromVault(documents, {
+      location: where || null,
+      remotePref: remoteParam === "1" ? "remote_only" : user?.remotePref ?? null,
+      experienceYears: user?.experienceYears ?? null,
+    });
+  } catch (err) {
+    suggestError = err instanceof Error ? err.message : String(err);
+  }
 
   // Run JSearch in parallel for each suggested query
   const debugErrors: string[] = [];
@@ -66,6 +72,7 @@ export async function GET(req: NextRequest) {
       docCount: documents.length,
       docTypes: documents.map((d) => d.type),
       suggestions,
+      suggestError,
     },
   });
 }

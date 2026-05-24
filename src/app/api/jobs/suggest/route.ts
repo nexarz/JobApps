@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
   });
 
   // Run JSearch in parallel for each suggested query
+  const debugErrors: string[] = [];
   const groups = await Promise.all(
     suggestions.map(async (s) => {
       try {
@@ -43,7 +44,9 @@ export async function GET(req: NextRequest) {
           limit: 8,
         });
         return { suggestion: s, jobs };
-      } catch {
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        debugErrors.push(`${s.query}: ${msg}`);
         return { suggestion: s, jobs: [] };
       }
     })
@@ -55,5 +58,11 @@ export async function GET(req: NextRequest) {
     suggestions,
     groups: filtered,
     appliedPrefs: { where, remoteOnly, experienceYears: user?.experienceYears ?? null },
+    _debug: {
+      hasRapidKey: !!process.env.RAPIDAPI_KEY,
+      rapidKeyPreview: process.env.RAPIDAPI_KEY ? `${process.env.RAPIDAPI_KEY.slice(0, 6)}...${process.env.RAPIDAPI_KEY.slice(-4)}` : null,
+      errors: debugErrors,
+      suggestionsCount: suggestions.length,
+    },
   });
 }

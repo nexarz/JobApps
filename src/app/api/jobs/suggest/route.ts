@@ -26,7 +26,6 @@ export async function GET(req: NextRequest) {
   const remoteOnly = remoteParam === "1" || user?.remotePref === "remote_only";
 
   let suggestions: Awaited<ReturnType<typeof suggestJobsFromVault>> = [];
-  let suggestError: string | null = null;
   try {
     suggestions = await suggestJobsFromVault(documents, {
       location: where || null,
@@ -34,11 +33,10 @@ export async function GET(req: NextRequest) {
       experienceYears: user?.experienceYears ?? null,
     });
   } catch (err) {
-    suggestError = err instanceof Error ? err.message : String(err);
+    console.error("[/api/jobs/suggest] suggestJobsFromVault failed:", err);
   }
 
   // Run JSearch in parallel for each suggested query
-  const debugErrors: string[] = [];
   const groups = await Promise.all(
     suggestions.map(async (s) => {
       try {
@@ -51,8 +49,7 @@ export async function GET(req: NextRequest) {
         });
         return { suggestion: s, jobs };
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        debugErrors.push(`${s.query}: ${msg}`);
+        console.error(`[/api/jobs/suggest] JSearch failed for "${s.query}":`, err);
         return { suggestion: s, jobs: [] };
       }
     })
@@ -64,15 +61,5 @@ export async function GET(req: NextRequest) {
     suggestions,
     groups: filtered,
     appliedPrefs: { where, remoteOnly, experienceYears: user?.experienceYears ?? null },
-    _debug: {
-      hasRapidKey: !!process.env.RAPIDAPI_KEY,
-      rapidKeyPreview: process.env.RAPIDAPI_KEY ? `${process.env.RAPIDAPI_KEY.slice(0, 6)}...${process.env.RAPIDAPI_KEY.slice(-4)}` : null,
-      errors: debugErrors,
-      suggestionsCount: suggestions.length,
-      docCount: documents.length,
-      docTypes: documents.map((d) => d.type),
-      suggestions,
-      suggestError,
-    },
   });
 }

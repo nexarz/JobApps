@@ -291,7 +291,7 @@ export async function suggestJobsFromVault(
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
-    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 },
+    generationConfig: { responseMimeType: "application/json", maxOutputTokens: 4096 },
   });
 
   const prefsBlock: string[] = [];

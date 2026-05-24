@@ -63,6 +63,9 @@ export async function GET(req: NextRequest) {
       rapidKeyPreview: process.env.RAPIDAPI_KEY ? `${process.env.RAPIDAPI_KEY.slice(0, 6)}...${process.env.RAPIDAPI_KEY.slice(-4)}` : null,
       errors: debugErrors,
       suggestionsCount: suggestions.length,
+      docCount: documents.length,
+      docTypes: documents.map((d) => d.type),
+      suggestions,
     },
   });
 }

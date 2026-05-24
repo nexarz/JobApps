@@ -340,7 +340,10 @@ Format:
     return JSON.parse(raw);
   } catch {
     const match = raw.match(/\[[\s\S]*\]/);
-    if (match) return JSON.parse(match[0]);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch {}
+    }
+    console.error("[suggestJobsFromVault] Failed to parse Gemini response:", raw.slice(0, 500));
     return [];
   }
 }

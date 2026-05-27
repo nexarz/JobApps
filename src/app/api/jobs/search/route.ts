@@ -15,7 +15,35 @@ export type JobListing = {
   postedAt: string;
   remote?: boolean;
   employerLogo?: string;
+  appliedAs?: { id: string; status: string } | null;
 };
+
+// Normalize for de-dupe: lowercased, stripped of punctuation/whitespace
+export function dedupeKey(company: string, title: string): string {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return `${norm(company)}::${norm(title)}`;
+}
+
+export type AppliedMap = Map<string, { id: string; status: string }>;
+
+export async function buildAppliedMap(userId: string): Promise<AppliedMap> {
+  const apps = await prisma.application.findMany({
+    where: { userId },
+    select: { id: true, jobTitle: true, company: true, status: true },
+  });
+  const map: AppliedMap = new Map();
+  for (const a of apps) {
+    map.set(dedupeKey(a.company, a.jobTitle), { id: a.id, status: a.status });
+  }
+  return map;
+}
+
+export function decorateWithApplied(jobs: JobListing[], applied: AppliedMap): JobListing[] {
+  return jobs.map((j) => ({
+    ...j,
+    appliedAs: applied.get(dedupeKey(j.company, j.title)) ?? null,
+  }));
+}
 
 // Back-compat alias for any older imports
 export type AdzunaJob = JobListing;
@@ -114,8 +142,11 @@ export async function GET(req: NextRequest) {
   const where = whereParam ?? user?.location ?? "";
 
   try {
-    const jobs = await searchJSearch({ query: what, country, remoteOnly, where, limit: 20 });
-    return NextResponse.json({ jobs, total: jobs.length });
+    const [jobs, applied] = await Promise.all([
+      searchJSearch({ query: what, country, remoteOnly, where, limit: 20 }),
+      buildAppliedMap(userId),
+    ]);
+    return NextResponse.json({ jobs: decorateWithApplied(jobs, applied), total: jobs.length });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Search failed" },

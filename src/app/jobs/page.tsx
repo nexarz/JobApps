@@ -1,10 +1,22 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeIn, FadeUpList, FadeUpItem } from "@/components/FadeUp";
 import type { AdzunaJob } from "@/app/api/jobs/search/route";
 import type { JobSuggestion } from "@/lib/claude";
+
+const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
+  saved:      { label: "Saved",      color: "var(--ink-3)", bg: "var(--paper-3)" },
+  applied:    { label: "Applied",    color: "var(--purple)", bg: "rgba(192,132,252,0.15)" },
+  screening:  { label: "Screening",  color: "var(--peach)", bg: "var(--peach-light)" },
+  interview:  { label: "Interviewing", color: "var(--mint)", bg: "var(--mint-light)" },
+  offer:      { label: "Offer",      color: "var(--mint)", bg: "var(--mint-light)" },
+  rejected:   { label: "Rejected",   color: "var(--pink)", bg: "var(--pink-light)" },
+  ghosted:    { label: "Ghosted",    color: "var(--ink-3)", bg: "var(--paper-3)" },
+  withdrawn:  { label: "Withdrawn",  color: "var(--ink-3)", bg: "var(--paper-3)" },
+};
 
 const COUNTRIES = [
   { value: "ca", label: "🇨🇦 Canada" },
@@ -34,12 +46,22 @@ function timeAgo(iso: string) {
 }
 
 function JobCard({ job, onGenerate }: { job: AdzunaJob; onGenerate: (job: AdzunaJob) => void }) {
+  const appliedBadge = job.appliedAs ? STATUS_BADGE[job.appliedAs.status] ?? STATUS_BADGE.saved : null;
   return (
-    <div className="rounded-2xl border p-5 transition-all" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)" }}>
+    <div className="rounded-2xl border p-5 transition-all" style={{ backgroundColor: "var(--paper-2)", borderColor: "var(--border)", opacity: job.appliedAs ? 0.85 : 1 }}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3 className="text-sm font-bold" style={{ color: "var(--ink)" }}>{job.title}</h3>
+            {appliedBadge && job.appliedAs && (
+              <Link
+                href={`/applications/${job.appliedAs.id}`}
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full transition-all hover:underline"
+                style={{ color: appliedBadge.color, backgroundColor: appliedBadge.bg }}
+              >
+                {appliedBadge.label}
+              </Link>
+            )}
             {formatSalary(job.salaryMin, job.salaryMax) && (
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--mint-light)", color: "var(--mint)" }}>
                 {formatSalary(job.salaryMin, job.salaryMax)}
@@ -56,13 +78,23 @@ function JobCard({ job, onGenerate }: { job: AdzunaJob; onGenerate: (job: Adzuna
           </p>
         </div>
         <div className="flex flex-col gap-2 flex-shrink-0">
-          <button
-            onClick={() => onGenerate(job)}
-            className="px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
-            style={{ backgroundColor: "var(--ink)", color: "#fff" }}
-          >
-            Generate →
-          </button>
+          {job.appliedAs ? (
+            <Link
+              href={`/applications/${job.appliedAs.id}`}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-center transition-all active:scale-95 whitespace-nowrap"
+              style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+            >
+              View app →
+            </Link>
+          ) : (
+            <button
+              onClick={() => onGenerate(job)}
+              className="px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
+              style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+            >
+              Generate →
+            </button>
+          )}
           <a
             href={job.url} target="_blank" rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl text-xs font-bold border text-center transition-all active:scale-95"

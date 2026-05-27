@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth";
 import { suggestJobsFromVault } from "@/lib/claude";
-import { searchJSearch } from "../search/route";
+import { searchJSearch, buildAppliedMap, decorateWithApplied } from "../search/route";
 
 export async function GET(req: NextRequest) {
   const userId = await getCurrentUserId();
@@ -36,7 +36,9 @@ export async function GET(req: NextRequest) {
     console.error("[/api/jobs/suggest] suggestJobsFromVault failed:", err);
   }
 
-  // Run JSearch in parallel for each suggested query
+  // Build the applied-jobs lookup once, then decorate each group
+  const applied = await buildAppliedMap(userId);
+
   const groups = await Promise.all(
     suggestions.map(async (s) => {
       try {
@@ -47,7 +49,7 @@ export async function GET(req: NextRequest) {
           where: where || undefined,
           limit: 8,
         });
-        return { suggestion: s, jobs };
+        return { suggestion: s, jobs: decorateWithApplied(jobs, applied) };
       } catch (err) {
         console.error(`[/api/jobs/suggest] JSearch failed for "${s.query}":`, err);
         return { suggestion: s, jobs: [] };

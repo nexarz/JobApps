@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
           country,
           remoteOnly,
           where: where || undefined,
-          limit: 8,
+          limit: 6,
         });
         return { suggestion: s, jobs: decorateWithApplied(jobs, applied) };
       } catch (err) {

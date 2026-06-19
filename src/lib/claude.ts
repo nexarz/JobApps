@@ -268,10 +268,17 @@ Return a JSON object with exactly these three keys:
 }
 
 export type JobSuggestion = {
-  query: string;       // Adzuna search term e.g. "community engagement manager"
+  query: string;       // Job-board search term e.g. "community engagement manager"
   label: string;       // Human-readable e.g. "Community Engagement Manager"
-  rationale: string;   // 1 sentence why this fits
-  seniority?: string;  // "entry" | "mid" | "senior" | "lead" — used to widen/narrow Adzuna
+  rationale: string;   // 1 sentence why this fits — names the transferable skills in play
+  seniority?: string;  // "entry" | "mid" | "senior" | "lead" — used to widen/narrow search
+  // How far this role sits from the person's obvious search:
+  //  direct   = a title they'd already search for
+  //  adjacent = same skills, different function/title they may not think of
+  //  stretch  = a level up, or a role their evidence supports them growing into
+  //  wildcard = a non-obvious cross-industry pivot their skills unlock
+  fitType?: "direct" | "adjacent" | "stretch" | "wildcard";
+  transferableSkills?: string[]; // the specific skills that qualify them for this role
 };
 
 export async function suggestJobsFromVault(
@@ -307,26 +314,46 @@ export async function suggestJobsFromVault(
     : null;
 
   const result = await model.generateContent(`
-You are a career advisor. Study these excerpts from a person's cover letters and resumes and identify the most suitable job roles for them to search for right now.
+You are a sharp career strategist who is famous for spotting non-obvious career moves. People come to you precisely because you surface roles they would never have searched for themselves — but that, once you explain the fit, feel obviously right.
+
+Below are excerpts from one person's cover letters and resumes.
 
 DOCUMENTS:
 ${sample}
 
 ${prefsBlock.length ? `APPLICANT PREFERENCES:\n${prefsBlock.join("\n")}\n` : ""}
-Return a JSON array of exactly 4 job suggestions that genuinely fit the background AND the preferences above. Vary the angle (e.g. one stretch role, one obvious fit, one adjacent pivot, one specialist niche).
+STEP 1 — Look past their job titles. Job titles are the trap; skills are the signal. Read the evidence and extract the underlying TRANSFERABLE assets:
+- Hard skills and tools (e.g. SQL, budgeting, A/B testing, Figma, stakeholder management)
+- Soft/leadership capabilities demonstrated with evidence (e.g. ran cross-functional projects, managed P&L, scaled a team)
+- Domain knowledge (e.g. healthcare, fintech, climate, education)
+- The "shape" of work they're good at (e.g. ambiguous 0-to-1 building, optimizing mature systems, client-facing persuasion, deep analysis)
 
-The "query" field is critical — it is passed verbatim to a job board search:
-- 2-4 words, lowercase, no punctuation
-- Use canonical industry titles that appear in real job postings (e.g. "product marketing manager" not "growth storyteller")
-- If experience is known, calibrate seniority${seniorityHint ? ` (target around "${seniorityHint}")` : ""}
-- Do NOT include location in the query — location is handled separately
+STEP 2 — Map those assets to roles ACROSS functions and industries. The whole point is reach: most of these should be roles the person would NOT type into a search box themselves, but that their evidence genuinely qualifies them for. A skill like "translated complex data into decisions for executives" opens analyst, strategy, product, and consulting roles — not just their last title.
+
+Return a JSON array of exactly 6 suggestions with this distribution:
+- 1 "direct": an obvious fit, a title they'd already search for (anchor / sanity check)
+- 2 "adjacent": same core skills, different function or title they likely haven't considered
+- 2 "stretch": a clear level-up, or a role their evidence shows they're ready to grow into
+- 1 "wildcard": a genuinely non-obvious cross-industry or cross-function pivot their skills unlock — surprising but defensible
+
+Rules for every suggestion:
+- It MUST be grounded in concrete evidence from the documents. Never suggest a role the evidence can't support. "transferableSkills" must quote real skills you saw, not generic filler.
+- The "rationale" must name the specific transferable skills that make the leap make sense — especially for adjacent/stretch/wildcard, explain the non-obvious connection in one vivid sentence.
+- The "query" field is passed VERBATIM to a real job board, so it must be a real, searchable job title:
+  - 2-4 words, lowercase, no punctuation
+  - Use canonical titles that actually appear in postings (e.g. "product marketing manager" not "growth storyteller")
+  - Do NOT include location — that is handled separately
+${seniorityHint ? `- Calibrate seniority around "${seniorityHint}" unless the fitType is "stretch" (then aim one level higher).` : "- Infer a sensible seniority from the evidence."}
+- Avoid near-duplicate queries — each should open a distinct pocket of the job market.
 
 Format:
 [
   {
     "query": "canonical job title, 2-4 lowercase words",
     "label": "Human Readable Title",
-    "rationale": "One sentence explaining why this fits their background and stated preferences",
+    "fitType": "direct" | "adjacent" | "stretch" | "wildcard",
+    "transferableSkills": ["skill pulled from the docs", "another real skill"],
+    "rationale": "One vivid sentence naming the transferable skills that make this fit — sell the non-obvious connection",
     "seniority": "entry" | "mid" | "senior" | "lead"
   }
 ]`);

@@ -25,6 +25,15 @@ const COUNTRIES = [
   { value: "au", label: "🇦🇺 Australia" },
 ];
 
+// How each suggestion relates to the user's obvious search — drives the badge
+// shown on each group so non-obvious matches are clearly signposted.
+const FIT_META: Record<string, { label: string; color: string; bg: string }> = {
+  direct:   { label: "Direct fit",   color: "var(--ink-3)", bg: "var(--paper-3)" },
+  adjacent: { label: "Adjacent",     color: "var(--purple)", bg: "rgba(192,132,252,0.15)" },
+  stretch:  { label: "Stretch",      color: "var(--peach)", bg: "var(--peach-light)" },
+  wildcard: { label: "Wildcard",     color: "var(--pink)", bg: "var(--pink-light)" },
+};
+
 type SuggestedGroup = { suggestion: JobSuggestion; jobs: AdzunaJob[] };
 type AppliedPrefs = { where: string; remoteOnly: boolean; experienceYears: number | null };
 
@@ -292,11 +301,34 @@ export default function JobsPage() {
               <div>
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: "var(--purple)" }}>
-                      {suggestion.label}
-                      {suggestion.seniority && <span className="ml-2 font-normal lowercase" style={{ color: "var(--ink-3)" }}>· {suggestion.seniority}</span>}
-                    </p>
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--purple)" }}>
+                        {suggestion.label}
+                        {suggestion.seniority && <span className="ml-2 font-normal lowercase" style={{ color: "var(--ink-3)" }}>· {suggestion.seniority}</span>}
+                      </p>
+                      {suggestion.fitType && FIT_META[suggestion.fitType] && (
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                          style={{ color: FIT_META[suggestion.fitType].color, backgroundColor: FIT_META[suggestion.fitType].bg }}
+                        >
+                          {FIT_META[suggestion.fitType].label}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs" style={{ color: "var(--ink-3)" }}>{suggestion.rationale}</p>
+                    {suggestion.transferableSkills && suggestion.transferableSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {suggestion.transferableSkills.map((skill) => (
+                          <span
+                            key={skill}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: "var(--paper-3)", color: "var(--ink-2)" }}
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-3">

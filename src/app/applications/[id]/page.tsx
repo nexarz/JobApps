@@ -208,13 +208,19 @@ export default function ApplicationDetailPage() {
     if (!app) return;
     setResearching(true);
     try {
-      await fetch("/api/research", {
+      const res = await fetch("/api/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ company: app.company, forceRefresh: true }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Research failed");
+      }
       await load();
       showToast("Research refreshed");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Research failed");
     } finally {
       setResearching(false);
     }

@@ -38,7 +38,7 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { status, currentStage, notes, appliedAt, location, remote, salaryMin, salaryMax } = body;
+  const { status, currentStage, notes, appliedAt, location, remote, salaryMin, salaryMax, coverLetter, resume } = body;
 
   if (status && !VALID_STATUSES.has(status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
@@ -53,6 +53,8 @@ export async function PATCH(
   if (salaryMin !== undefined) data.salaryMin = salaryMin;
   if (salaryMax !== undefined) data.salaryMax = salaryMax;
   if (appliedAt !== undefined) data.appliedAt = appliedAt ? new Date(appliedAt) : null;
+  if (coverLetter !== undefined) data.coverLetter = coverLetter;
+  if (resume !== undefined) data.resume = resume;
 
   // Auto-set appliedAt the first time status moves off "saved"
   if (status && status !== "saved" && !existing.appliedAt && appliedAt === undefined) {

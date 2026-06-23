@@ -590,3 +590,82 @@ Return a JSON object with exactly this shape:
     throw new Error(`Failed to parse analysis response: ${raw.slice(0, 300)}`);
   }
 }
+
+export async function improveDocument({
+  text,
+  type,
+  analysis,
+  jobDesc,
+  jobTitle,
+  company,
+}: {
+  text: string;
+  type: "resume" | "cover_letter";
+  analysis: AnalysisResult;
+  jobDesc: string;
+  jobTitle: string;
+  company: string;
+}): Promise<string> {
+  const issueDigest = [
+    `Overall score: ${analysis.score}/100`,
+    `Summary: ${analysis.summary}`,
+    `\nCritical fixes needed:\n${analysis.criticalFixes.map((f) => `- ${f}`).join("\n")}`,
+    `\nQuick wins:\n${analysis.quickWins.map((w) => `- ${w}`).join("\n")}`,
+    `\nPer-section issues:`,
+    ...analysis.sections
+      .filter((s) => s.status !== "pass")
+      .map(
+        (s) =>
+          `${s.name} (${s.score}/100): ${s.feedback}\n${s.suggestions.map((sg) => `  → ${sg}`).join("\n")}`
+      ),
+  ].join("\n");
+
+  const prompt = type === "resume"
+    ? `You are an ATS optimization expert. Rewrite the resume below to fix every issue identified in the analysis report. The rewrite must address all critical fixes and quick wins while preserving every factual detail (roles, companies, dates, metrics). Do not invent new facts.
+
+ROLE: ${jobTitle} at ${company}
+JOB DESCRIPTION:
+${jobDesc}
+
+ANALYSIS REPORT — fix ALL of these:
+${issueDigest}
+
+ORIGINAL RESUME:
+${text}
+
+Rewrite rules:
+- Fix all ATS formatting issues (section labels, date format, remove personal pronouns, remove objective/references lines)
+- Restructure bullets to impact-first (result → action → context)
+- Add/fix quantification where the original has evidence but no numbers; where no evidence exists, restructure the bullet rather than inventing numbers
+- Mirror exact keyword and tool names from the job description
+- Preserve the applicant's voice and all real facts
+- Return plain text only — no markdown, no headers with #, no special characters`
+    : `You are an expert cover letter editor. Rewrite the cover letter below to fix every issue identified in the analysis report while preserving the applicant's voice and all factual claims.
+
+ROLE: ${jobTitle} at ${company}
+JOB DESCRIPTION:
+${jobDesc}
+
+ANALYSIS REPORT — fix ALL of these:
+${issueDigest}
+
+ORIGINAL COVER LETTER:
+${text}
+
+Rewrite rules:
+- Address the company specifically — if the original lacks a concrete company-specific detail, add one from the job description's language/mission
+- Strengthen or replace a weak opening hook (never start with "I am writing to apply")
+- Weave in 2-3 achievements with concrete numbers where the original is vague; only use metrics you can infer from the original text
+- Remove any AI-detection signals (filler phrases, uniform sentence rhythm, hollow corporate language)
+- Keep it to 3-4 tight paragraphs, half a page or less
+- Preserve the applicant's voice — do not make it sound more formal or more AI-generated than the original
+- Return plain text only — no markdown, no special characters`;
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.5-flash",
+    generationConfig: { maxOutputTokens: 16384 },
+  });
+
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
+}

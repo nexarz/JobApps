@@ -97,6 +97,11 @@ export default function ApplicationDetailPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [analyzeError, setAnalyzeError] = useState("");
+  // Improve
+  const [improving, setImproving] = useState(false);
+  const [improveError, setImproveError] = useState("");
+  const [hasUnsavedImprovement, setHasUnsavedImprovement] = useState(false);
+  const [savingImprovement, setSavingImprovement] = useState(false);
 
   // Tracker editable state
   const [status, setStatus] = useState("saved");
@@ -140,6 +145,8 @@ export default function ApplicationDetailPage() {
     setAnalyzeText(analyzeType === "resume" ? app.resume : app.coverLetter);
     setAnalysis(null);
     setAnalyzeError("");
+    setImproveError("");
+    setHasUnsavedImprovement(false);
   }, [analyzeType, app]);
 
   const showToast = (msg: string) => {
@@ -243,6 +250,52 @@ export default function ApplicationDetailPage() {
       setPrepError(e instanceof Error ? e.message : "Generation failed");
     } finally {
       setGeneratingPrep(false);
+    }
+  };
+
+  const improveWithAnalysis = async () => {
+    if (!app || !analysis) return;
+    setImproving(true);
+    setImproveError("");
+    try {
+      const res = await fetch(`/api/applications/${id}/improve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: analyzeType, text: analyzeText, analysis }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Improvement failed");
+      const { improved } = await res.json();
+      setAnalyzeText(improved);
+      setAnalysis(null);
+      setHasUnsavedImprovement(true);
+    } catch (e) {
+      setImproveError(e instanceof Error ? e.message : "Improvement failed");
+    } finally {
+      setImproving(false);
+    }
+  };
+
+  const saveImprovement = async () => {
+    if (!app) return;
+    setSavingImprovement(true);
+    try {
+      const res = await fetch(`/api/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          analyzeType === "cover_letter"
+            ? { coverLetter: analyzeText }
+            : { resume: analyzeText }
+        ),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      await load();
+      setHasUnsavedImprovement(false);
+      showToast("Saved");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingImprovement(false);
     }
   };
 
@@ -727,17 +780,55 @@ export default function ApplicationDetailPage() {
                 />
               </div>
 
-              <button
-                onClick={runAnalysis}
-                disabled={analyzing || !analyzeText.trim()}
-                className="w-full py-3 rounded-xl text-sm font-bold disabled:opacity-60"
-                style={{ backgroundColor: "var(--ink)", color: "#fff" }}
-              >
-                {analyzing ? "Analyzing..." : "Run ATS Check →"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={runAnalysis}
+                  disabled={analyzing || improving || !analyzeText.trim()}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold disabled:opacity-60"
+                  style={{ backgroundColor: "var(--ink)", color: "#fff" }}
+                >
+                  {analyzing ? "Analyzing..." : "Run ATS Check →"}
+                </button>
+                {analysis && (
+                  <button
+                    onClick={improveWithAnalysis}
+                    disabled={improving || analyzing}
+                    className="flex-1 py-3 rounded-xl text-sm font-bold border disabled:opacity-60"
+                    style={{ borderColor: "var(--purple)", color: "var(--purple)", backgroundColor: "rgba(192,132,252,0.08)" }}
+                  >
+                    {improving ? "Improving..." : `Auto-fix (score: ${analysis.score}) →`}
+                  </button>
+                )}
+              </div>
+
+              {hasUnsavedImprovement && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl border" style={{ backgroundColor: "rgba(192,132,252,0.08)", borderColor: "var(--purple)" }}>
+                  <p className="text-xs font-semibold flex-1" style={{ color: "var(--purple)" }}>
+                    Improved version ready — review the text above, then save.
+                  </p>
+                  <button
+                    onClick={() => { setAnalyzeText(analyzeType === "resume" ? app.resume : app.coverLetter); setHasUnsavedImprovement(false); }}
+                    className="text-xs font-semibold"
+                    style={{ color: "var(--ink-3)" }}
+                  >
+                    Discard
+                  </button>
+                  <button
+                    onClick={saveImprovement}
+                    disabled={savingImprovement}
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold disabled:opacity-60"
+                    style={{ backgroundColor: "var(--purple)", color: "#fff" }}
+                  >
+                    {savingImprovement ? "Saving..." : "Save changes"}
+                  </button>
+                </div>
+              )}
 
               {analyzeError && (
                 <p className="text-xs font-semibold px-4 py-3 rounded-xl border" style={{ color: "var(--pink)", backgroundColor: "var(--pink-light)", borderColor: "rgba(240,140,136,0.3)" }}>{analyzeError}</p>
+              )}
+              {improveError && (
+                <p className="text-xs font-semibold px-4 py-3 rounded-xl border" style={{ color: "var(--pink)", backgroundColor: "var(--pink-light)", borderColor: "rgba(240,140,136,0.3)" }}>{improveError}</p>
               )}
 
               {analysis && (

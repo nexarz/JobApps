@@ -58,6 +58,9 @@ model Application {
   coverLetter      String
   resume           String
   websiteHtml      String
+  // Persisted ATS analysis (JSON of AnalysisResult) so a check survives reloads
+  coverLetterAnalysis String?
+  resumeAnalysis      String?
   // Tracking fields
   status           String              @default("saved") // saved | applied | screening | interview | offer | rejected | ghosted | withdrawn
   currentStage     String?             // e.g. "Recruiter screen", "Hiring manager interview", "Onsite"

@@ -38,13 +38,13 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { status, currentStage, notes, appliedAt, location, remote, salaryMin, salaryMax, coverLetter, resume } = body;
+  const { status, currentStage, notes, appliedAt, location, remote, salaryMin, salaryMax, coverLetter, resume, coverLetterAnalysis, resumeAnalysis } = body;
 
   if (status && !VALID_STATUSES.has(status)) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  const data: Record<string, unknown> = { lastActivityAt: new Date() };
+  const data: Record<string, unknown> = {};
   if (status !== undefined) data.status = status;
   if (currentStage !== undefined) data.currentStage = currentStage;
   if (notes !== undefined) data.notes = notes;
@@ -55,6 +55,13 @@ export async function PATCH(
   if (appliedAt !== undefined) data.appliedAt = appliedAt ? new Date(appliedAt) : null;
   if (coverLetter !== undefined) data.coverLetter = coverLetter;
   if (resume !== undefined) data.resume = resume;
+  if (coverLetterAnalysis !== undefined) data.coverLetterAnalysis = coverLetterAnalysis;
+  if (resumeAnalysis !== undefined) data.resumeAnalysis = resumeAnalysis;
+
+  // Persisting an ATS analysis on its own isn't real activity — don't let it
+  // reorder the applications list. Bump lastActivityAt only for other edits.
+  const onlyAnalysis = Object.keys(data).every((k) => k === "coverLetterAnalysis" || k === "resumeAnalysis");
+  if (!onlyAnalysis) data.lastActivityAt = new Date();
 
   // Auto-set appliedAt the first time status moves off "saved"
   if (status && status !== "saved" && !existing.appliedAt && appliedAt === undefined) {

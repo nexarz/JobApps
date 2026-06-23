@@ -47,6 +47,8 @@ type Application = {
   coverLetter: string;
   resume: string;
   websiteHtml: string;
+  coverLetterAnalysis: string | null;
+  resumeAnalysis: string | null;
   status: string;
   currentStage: string | null;
   location: string | null;
@@ -143,7 +145,9 @@ export default function ApplicationDetailPage() {
   useEffect(() => {
     if (!app) return;
     setAnalyzeText(analyzeType === "resume" ? app.resume : app.coverLetter);
-    setAnalysis(null);
+    // Rehydrate any previously saved ATS check for this document type
+    const stored = analyzeType === "resume" ? app.resumeAnalysis : app.coverLetterAnalysis;
+    setAnalysis(stored ? JSON.parse(stored) : null);
     setAnalyzeError("");
     setImproveError("");
     setHasUnsavedImprovement(false);
@@ -282,10 +286,11 @@ export default function ApplicationDetailPage() {
       const res = await fetch(`/api/applications/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        // Clear the stale analysis — it described the pre-improvement text
         body: JSON.stringify(
           analyzeType === "cover_letter"
-            ? { coverLetter: analyzeText }
-            : { resume: analyzeText }
+            ? { coverLetter: analyzeText, coverLetterAnalysis: null }
+            : { resume: analyzeText, resumeAnalysis: null }
         ),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -317,7 +322,18 @@ export default function ApplicationDetailPage() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      setAnalysis(await res.json());
+      const result: AnalysisResult = await res.json();
+      setAnalysis(result);
+      // Persist so the check survives navigation/refresh for this application
+      fetch(`/api/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          analyzeType === "cover_letter"
+            ? { coverLetterAnalysis: JSON.stringify(result) }
+            : { resumeAnalysis: JSON.stringify(result) }
+        ),
+      }).catch(() => {});
     } catch (err) {
       setAnalyzeError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
